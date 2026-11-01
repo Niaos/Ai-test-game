@@ -1,0 +1,48 @@
+{
+  "name": "shachang-showdown",
+  "productName": "沙场对决",
+  "version": "1.0.0",
+  "description": "星球领地攻防 · 可编程算法对战",
+  "main": "main.js",
+  "author": "WorkBuddy",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win"
+  },
+  "devDependencies": {
+    "electron": "38.2.0",
+    "electron-builder": "26.0.12"
+  },
+  "build": {
+    "appId": "com.shachang.showdown",
+    "productName": "沙场对决",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "app/**/*"
+    ],
+    "win": {
+      "target": [
+        { "target": "nsis", "arch": ["x64"] }
+      ],
+      "icon": "build/icon.ico",
+      "artifactName": "ShachangShowdown-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "沙场对决",
+      "uninstallDisplayName": "沙场对决",
+      "deleteAppDataOnUninstall": false,
+      "differentialPackage": false
+    }
+  }
+}

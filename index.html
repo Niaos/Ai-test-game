@@ -1,0 +1,1661 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>沙场对决 · 星球领地战</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; height: 100%; overflow: hidden; background: #080d1c; color: #e8eefb;
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+    user-select: none;
+  }
+  button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+  .hidden { display: none !important; }
+
+  #app { position: relative; height: 100%; }
+  .screen { position: absolute; inset: 0; display: none; flex-direction: column; }
+  .screen.active { display: flex; }
+
+  /* ================= 主菜单 ================= */
+  #screen-menu { align-items: center; justify-content: center; overflow: auto; padding: 20px;
+    background: radial-gradient(circle at 50% 0%, #16224a 0%, #0a1020 42%, #06090f 100%); }
+  .menu-card { width: 100%; max-width: 520px; display: flex; flex-direction: column; gap: 18px; }
+  .title-wrap { text-align: center; margin-bottom: 4px; }
+  .title-wrap h1 { margin: 0; font-size: 38px; letter-spacing: 8px; text-indent: 8px;
+    background: linear-gradient(180deg, #ffffff, #7fc9ff); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .title-wrap p { margin: 8px 0 0; font-size: 12px; color: #7d8db3; letter-spacing: 2px; }
+
+  .setting-row { display: flex; flex-direction: column; gap: 8px; }
+  .setting-row > label { font-size: 12px; color: #8b9abd; letter-spacing: 1px; }
+  .seg { display: flex; gap: 8px; flex-wrap: wrap; }
+  .seg button {
+    flex: 1; min-width: 84px; padding: 10px 8px; border-radius: 12px; font-size: 13px;
+    background: #131c33; border: 1px solid #24304d; color: #b9c6e2; transition: .15s;
+  }
+  .seg button:hover { background: #18233e; border-color: #35456b; }
+  .seg button.on { background: #14375f; border-color: #3d8ad6; color: #eaf4ff; box-shadow: 0 0 0 1px #2f6fb0 inset, 0 4px 18px -6px #2f8fff; }
+  .seg.small button { padding: 8px 6px; font-size: 12px; }
+
+  .modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .mode-card {
+    text-align: left; padding: 12px 10px; border-radius: 14px; background: #131c33;
+    border: 1px solid #24304d; color: #b9c6e2; transition: .15s; display: flex; flex-direction: column; gap: 6px;
+  }
+  .mode-card:hover { background: #18233e; border-color: #35456b; }
+  .mode-card.on { background: #14375f; border-color: #3d8ad6; color: #eaf4ff; box-shadow: 0 4px 18px -6px #2f8fff; }
+  .mode-card b { font-size: 13px; display: flex; align-items: center; gap: 6px; }
+  .mode-card span { font-size: 10.5px; line-height: 1.5; color: #8494b8; }
+  .mode-card.on span { color: #b7d4f5; }
+
+  .opp-note {
+    font-size: 11.5px; color: #7f8fb4; background: #101a2f; border: 1px solid #1e2a45;
+    border-radius: 10px; padding: 9px 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .opp-note b { color: #4ee0a8; font-weight: 600; }
+  .opp-note button { color: #ff8a9b; font-size: 11px; text-decoration: underline; }
+
+  .cta {
+    margin-top: 6px; padding: 15px; border-radius: 14px; font-size: 16px; letter-spacing: 4px; text-indent: 4px;
+    background: linear-gradient(180deg, #2f8fff, #1b5fc4); color: #fff; font-weight: 600;
+    box-shadow: 0 10px 30px -12px #2f8fff;
+  }
+  .cta:hover { filter: brightness(1.08); }
+  .cta:active { transform: translateY(1px); }
+  .menu-links { text-align: center; font-size: 11.5px; color: #66769a; display: flex; gap: 14px; justify-content: center; }
+  .menu-links a { color: #7fc9ff; text-decoration: none; }
+  .menu-links a:hover { text-decoration: underline; }
+
+  /* ================= 对局 ================= */
+  #screen-game { background: radial-gradient(circle at 50% 0%, #101a37 0%, #080d1c 60%); }
+  .hud {
+    display: flex; align-items: center; gap: 10px; padding: 10px 12px; flex-wrap: wrap;
+    background: #0c1428; border-bottom: 1px solid #182444;
+  }
+  .side { display: flex; align-items: baseline; gap: 6px; font-size: 12px; color: #9fb0d0; }
+  .side .dot { width: 9px; height: 9px; border-radius: 3px; }
+  .side.me .dot { background: #1ea7c8; box-shadow: 0 0 8px #1ea7c8; }
+  .side.foe .dot { background: #c93a76; box-shadow: 0 0 8px #c93a76; }
+  .side b { font-size: 17px; color: #e8eefb; font-variant-numeric: tabular-nums; }
+  .hud .mid { margin: 0 auto; font-size: 12px; color: #8b9abd; font-variant-numeric: tabular-nums; }
+  .icon-btn {
+    width: 34px; height: 34px; border-radius: 10px; background: #16203a; border: 1px solid #26314f;
+    color: #c8d5ef; font-size: 14px; display: flex; align-items: center; justify-content: center;
+  }
+  .icon-btn:hover { background: #1d2a49; }
+
+  .stage { flex: 1; min-height: 0; position: relative; display: flex; align-items: center; justify-content: center; padding: 6px; }
+  canvas { max-width: 100%; max-height: 100%; display: block; border-radius: 12px; touch-action: none; }
+
+  .controls { padding: 10px 14px 14px; background: #0c1428; border-top: 1px solid #182444; }
+  .pctrow { display: flex; align-items: center; gap: 10px; font-size: 12px; color: #8b9abd; }
+  input[type=range] {
+    -webkit-appearance: none; appearance: none; height: 4px; border-radius: 3px; outline: none;
+    background: linear-gradient(90deg, #2f8fff var(--p,50%), #223052 var(--p,50%));
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%;
+    background: #fff; border: 3px solid #2f8fff; cursor: pointer;
+  }
+  #pct { flex: 1; }
+  #pctLabel { width: 44px; text-align: right; font-variant-numeric: tabular-nums; color: #dfe8f8; }
+  .hint { font-size: 10.5px; color: #5e6c8c; margin-top: 6px; line-height: 1.5; }
+
+  /* 代码模式面板 */
+  .codePanel { display: none; flex-direction: column; gap: 6px; padding: 8px 10px 10px;
+    background: #0a1122; border-top: 1px solid #182444; height: 40vh; }
+  .codePanel.show { display: flex; }
+  .codePanel .head { display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: #8b9abd; }
+  .codePanel .head .spacer { flex: 1; }
+  .codePanel textarea {
+    flex: 1; min-height: 0; width: 100%; resize: none; border-radius: 10px; padding: 10px 12px;
+    background: #060b16; color: #d8e3f8; border: 1px solid #1c2743; outline: none;
+    font-family: ui-monospace, Consolas, "Cascadia Mono", monospace; font-size: 12px; line-height: 1.55;
+    tab-size: 2; white-space: pre;
+  }
+  .mini-btn { padding: 5px 10px; border-radius: 8px; font-size: 11.5px; background: #17233f; border: 1px solid #26314f; color: #b9c6e2; }
+  .mini-btn:hover { background: #1e2c4d; }
+  .mini-btn.primary { background: #1b5fc4; border-color: #2f8fff; color: #fff; }
+
+  /* 暂停蒙层 */
+  .veil {
+    position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 8px; background: rgba(6, 10, 20, .72); backdrop-filter: blur(2px);
+  }
+  .veil strong { font-size: 22px; letter-spacing: 6px; text-indent: 6px; color: #cfe0ff; }
+  .veil span { font-size: 12px; color: #7f8fb4; }
+
+  /* ================= 二级设置 ================= */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(4, 8, 16, .66); backdrop-filter: blur(3px);
+    display: flex; align-items: center; justify-content: center; padding: 18px; z-index: 50;
+  }
+  .sheet {
+    width: 100%; max-width: 380px; background: #0e1730; border: 1px solid #22304e; border-radius: 18px;
+    padding: 18px; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 30px 60px -30px #000;
+  }
+  .sheet h3 { margin: 0; font-size: 14px; letter-spacing: 2px; color: #dbe6fa; }
+  .sheet .row { display: flex; flex-direction: column; gap: 8px; }
+  .sheet .row > label { font-size: 11.5px; color: #8391b3; display: flex; justify-content: space-between; }
+  .sheet .btns { display: flex; gap: 8px; }
+  .sheet .btns button { flex: 1; padding: 11px; border-radius: 11px; font-size: 13px; background: #16213b; border: 1px solid #26314f; color: #c8d5ef; }
+  .sheet .btns button:hover { background: #1d2a49; }
+  .sheet .btns button.warn { color: #ff9aa8; }
+  .sheet .btns button.go { background: #1b5fc4; border-color: #2f8fff; color: #fff; }
+
+  /* ================= 结算 ================= */
+  #screen-result { align-items: center; justify-content: center; padding: 20px;
+    background: radial-gradient(circle at 50% 10%, #142a4d 0%, #0a1020 45%, #06090f 100%); }
+  .result-card { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 16px; text-align: center; }
+  .verdict { font-size: 46px; letter-spacing: 10px; text-indent: 10px; font-weight: 700; }
+  .verdict.win { color: #4ee0a8; text-shadow: 0 0 34px rgba(78,224,168,.5); }
+  .verdict.lose { color: #ff6b81; text-shadow: 0 0 34px rgba(255,107,129,.45); }
+  .verdict.draw { color: #ffd166; }
+  .verdict-sub { font-size: 12px; color: #8391b3; margin-top: -8px; letter-spacing: 1px; }
+  .stat-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px; text-align: left;
+    background: #0e1730; border: 1px solid #1d2944; border-radius: 14px; padding: 14px;
+  }
+  .stat-grid div { display: flex; justify-content: space-between; font-size: 12px; color: #8391b3; }
+  .stat-grid b { color: #dbe6fa; font-variant-numeric: tabular-nums; }
+  .result-actions { display: flex; flex-direction: column; gap: 9px; }
+  .result-actions button { padding: 13px; border-radius: 12px; font-size: 14px; letter-spacing: 1px; }
+  .btn-retry { background: linear-gradient(180deg, #2f8fff, #1b5fc4); color: #fff; font-weight: 600; box-shadow: 0 10px 30px -14px #2f8fff; }
+  .btn-save { background: #0f4a3c; border: 1px solid #1d7a63; color: #cdf6ea; }
+  .btn-save:hover { background: #135c4a; }
+  .btn-home { background: #16213b; border: 1px solid #26314f; color: #b9c6e2; }
+  .save-note { font-size: 11px; color: #58c9a5; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(20px);
+    background: #10331f; border: 1px solid #1e6b45; color: #b8f0d2; padding: 10px 16px; border-radius: 10px;
+    font-size: 12px; opacity: 0; transition: .25s; z-index: 80; pointer-events: none; white-space: nowrap;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ================= 代码手册 ================= */
+  .code-hint {
+    display: flex; align-items: center; gap: 6px; margin-top: 2px;
+    font-size: 11px; color: #7f8fb4; background: #0b1424; border: 1px solid #1b2740;
+    border-radius: 8px; padding: 6px 9px; line-height: 1.5; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  .code-hint b { color: #8fc4ff; font-weight: 600; }
+  .code-hint.bad { color: #ffb3c0; border-color: #6b2536; background: #22101a; }
+
+  .docs-overlay {
+    position: fixed; inset: 0; background: rgba(4, 8, 16, .78); backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 70;
+  }
+  .docs-overlay.hidden { display: none; }
+  .docs {
+    width: 100%; max-width: 660px; max-height: 88vh; display: flex; flex-direction: column;
+    background: #0b1324; border: 1px solid #22304e; border-radius: 18px; overflow: hidden;
+    box-shadow: 0 40px 80px -40px #000;
+  }
+  .docs header { display: flex; align-items: center; gap: 10px; padding: 13px 16px; border-bottom: 1px solid #18233c; }
+  .docs header h3 { flex: 1; margin: 0; font-size: 13.5px; letter-spacing: 2px; color: #dbe6fa; }
+  .docs-body { overflow-y: auto; padding: 14px 16px 22px; display: flex; flex-direction: column; gap: 18px; }
+  .docs h4 { margin: 0 0 8px; font-size: 12px; color: #8fc4ff; letter-spacing: 1px; }
+  .docs h4 em { font-style: normal; color: #5e6c8c; font-size: 11px; letter-spacing: 0; margin-left: 6px; }
+  .docs p { margin: 0 0 8px; font-size: 12px; color: #93a1c0; line-height: 1.7; }
+  .docs p code, .docs li code, .docs td code {
+    font-family: ui-monospace, Consolas, monospace; font-size: 11.5px;
+    background: #152140; color: #9fd0ff; padding: 1px 5px; border-radius: 4px;
+  }
+  .rule-list { margin: 0; padding-left: 18px; font-size: 12px; color: #93a1c0; line-height: 1.9; }
+  .rule-list b { color: #dbe6fa; }
+
+  .api-tbl { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+  .api-tbl th { text-align: left; color: #67769a; font-weight: 500; padding: 5px 8px; border-bottom: 1px solid #1a2439; }
+  .api-tbl td { padding: 5px 8px; border-bottom: 1px solid #141d31; color: #a9b6d2; vertical-align: top; line-height: 1.55; }
+  .api-tbl td:first-child { font-family: ui-monospace, Consolas, monospace; color: #9fd0ff; white-space: nowrap; }
+  .api-tbl td:nth-child(2) { color: #6f7fa3; white-space: nowrap; }
+
+  .snip { border: 1px solid #1e2a45; border-radius: 12px; overflow: hidden; background: #091020; }
+  .snip + .snip { margin-top: 9px; }
+  .snip .snip-head { display: flex; align-items: center; gap: 8px; padding: 7px 10px; background: #101a30; border-bottom: 1px solid #1a2439; }
+  .snip .snip-head b { font-size: 12px; color: #cfe0ff; font-weight: 600; white-space: nowrap; }
+  .snip .snip-head span { flex: 1; font-size: 11px; color: #67769a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .snip pre {
+    margin: 0; padding: 9px 12px; font-family: ui-monospace, Consolas, monospace; font-size: 11px;
+    color: #8fb2dd; line-height: 1.65; overflow: auto; max-height: 165px;
+  }
+  .snip pre i { color: #4f6a92; font-style: normal; }
+
+  .err-tbl { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+  .err-tbl td { padding: 5px 8px; border-bottom: 1px solid #141d31; color: #a9b6d2; line-height: 1.55; }
+  .err-tbl td:first-child { font-family: ui-monospace, Consolas, monospace; color: #ffb3c0; white-space: nowrap; }
+
+  #checkOverlay .sheet { max-width: 440px; }
+  #checkOut {
+    margin: 0; padding: 12px; border-radius: 12px; background: #091020; border: 1px solid #1d2944;
+    font-family: ui-monospace, Consolas, monospace; font-size: 11.5px; line-height: 1.85;
+    color: #a9b6d2; white-space: pre-wrap; max-height: 46vh; overflow: auto;
+  }
+  #checkOut b { color: #dbe6fa; }
+  #checkOut .ok { color: #4ee0a8; }
+  #checkOut .no { color: #ff8a9c; }
+  #checkOut .warn { color: #ffd166; }
+
+  @media (max-width: 480px) {
+    .title-wrap h1 { font-size: 30px; letter-spacing: 6px; }
+    .modes { grid-template-columns: 1fr; }
+    .mode-card { flex-direction: row; align-items: center; gap: 10px; }
+    .mode-card span { display: none; }
+    .hud { padding: 8px 10px; gap: 8px; }
+    .side b { font-size: 15px; }
+    .codePanel { height: 46vh; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ============ 一级：主菜单 ============ -->
+  <section id="screen-menu" class="screen active">
+    <div class="menu-card">
+      <div class="title-wrap">
+        <h1>沙场对决</h1>
+        <p>星球领地攻防 · 划线出兵 · 吞并全图</p>
+      </div>
+
+      <div class="setting-row">
+        <label>棋盘大小</label>
+        <div class="seg" id="segSize">
+          <button data-size="small">小 · 6×9</button>
+          <button data-size="normal" class="on">标准 · 8×12</button>
+          <button data-size="large">大 · 10×15</button>
+        </div>
+      </div>
+
+      <div class="setting-row">
+        <label>难度</label>
+        <div class="seg" id="segLevel">
+          <button data-level="easy">简单</button>
+          <button data-level="normal" class="on">普通</button>
+          <button data-level="hard">困难</button>
+        </div>
+      </div>
+
+      <div class="setting-row">
+        <label>操作模式</label>
+        <div class="modes" id="segMode">
+          <button class="mode-card" data-mode="mouse">
+            <b>🖱 鼠标模式</b><span>点选己方星球再点目标，或直接拖拽</span>
+          </button>
+          <button class="mode-card" data-mode="touch">
+            <b>📱 移动端模式</b><span>手指按住拖到目标松手，扫过多块一起出兵</span>
+          </button>
+          <button class="mode-card" data-mode="code">
+            <b>⌨ 代码模式</b><span>写 decide(ctx) 算法自动指挥，看它打完全场</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="opp-note" id="oppNote">敌方 AI：普通难度</div>
+
+      <button class="cta" id="btnStart">开 始 游 戏</button>
+
+      <div class="menu-links">
+        <a href="algo-lab/index.html">算法实验场（批量验证算法）</a>
+        <a href="#" id="btnClearAlgo">清除已保存算法</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 对局 ============ -->
+  <section id="screen-game" class="screen">
+    <header class="hud">
+      <div class="side me"><span class="dot"></span><b id="hudMine">3</b><span>块</span><span id="hudMineTroops">126 兵</span></div>
+      <div class="mid"><span id="hudTime">00:00</span> · <span id="hudSize">8×12</span> · <span id="hudLevel">普通</span> · <span id="hudMode">鼠标</span></div>
+      <div class="side foe"><span id="hudFoeTroops">126 兵</span><span>块</span><b id="hudFoe">3</b><span class="dot"></span></div>
+      <button class="icon-btn" id="btnPauseQuick" title="暂停">⏸</button>
+      <button class="icon-btn" id="btnSettings" title="设置">⚙</button>
+    </header>
+
+    <div class="stage" id="stage">
+      <canvas id="cv"></canvas>
+      <div class="veil hidden" id="pauseVeil"><strong>已暂停</strong><span>点右上角 ⚙ 继续游戏</span></div>
+    </div>
+
+    <div class="controls" id="dragControls">
+      <div class="pctrow">
+        <span>出兵比例</span>
+        <input type="range" id="pct" min="10" max="100" step="5" value="50">
+        <span id="pctLabel">50%</span>
+      </div>
+      <div class="hint" id="modeHint">从己方星球拖到目标星球松手出兵；拖动途中扫过其他己方星球可多路齐发</div>
+    </div>
+
+    <div class="codePanel" id="codePanel">
+      <div class="head">
+        <span>我的算法 · decide(ctx)</span>
+        <span class="spacer"></span>
+        <button class="mini-btn" id="btnCheckCode">自检</button>
+        <button class="mini-btn" id="btnCodeHelp">📖 手册</button>
+        <button class="mini-btn" id="btnLoadPreset">范例</button>
+        <button class="mini-btn primary" id="btnApplyCode">应用并重开</button>
+      </div>
+      <div class="code-hint" id="codeHint">每 0.2 秒自动调用一次 decide(ctx)，每轮最多 4 条 ctx.send(出发, 目标, 比例)</div>
+      <textarea id="codeBox" spellcheck="false"></textarea>
+    </div>
+  </section>
+
+  <!-- ============ 二级设置 ============ -->
+  <div class="overlay hidden" id="settingsOverlay">
+    <div class="sheet">
+      <h3>游戏设置</h3>
+
+      <div class="btns">
+        <button class="go" id="btnResume">继续游戏</button>
+        <button id="btnPauseToggle">暂停</button>
+      </div>
+
+      <div class="row">
+        <label><span>音量</span><span id="volLabel">60%</span></label>
+        <input type="range" id="vol" min="0" max="100" step="5" value="60">
+      </div>
+
+      <div class="row">
+        <label><span>游戏速度</span><span id="speedLabel">1x</span></label>
+        <div class="seg small" id="segSpeed">
+          <button data-speed="0.5">0.5x</button>
+          <button data-speed="1" class="on">1x</button>
+          <button data-speed="2">2x</button>
+          <button data-speed="4">4x</button>
+        </div>
+      </div>
+
+      <div class="btns">
+        <button id="btnRestartMid">重新开始</button>
+        <button class="warn" id="btnHomeMid">返回主菜单</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 算法手册 ============ -->
+  <div class="docs-overlay hidden" id="docsOverlay">
+    <div class="docs">
+      <header>
+        <h3>算法手册 · 怎么写 decide(ctx)</h3>
+        <button class="mini-btn" id="btnDocsClose">关闭</button>
+      </header>
+      <div class="docs-body">
+
+        <section>
+          <h4>① 先记住这 5 条规则<em>看完就能写</em></h4>
+          <ol class="rule-list">
+            <li>入口函数必须叫 <code>decide(ctx)</code>，每 <b>0.2 秒</b>被自动调用一次，一局约调用 900 次。</li>
+            <li>每次调用最多发 <b>4 条</b>指令，第 5 条会被判非法。用 <code>ctx.ordersLeft</code> 看还剩几条。</li>
+            <li><code>ctx.send(出发id, 目标id, 比例)</code>：比例是<b>从出发地当前驻军里抽多少</b>，取值 (0,1]，如 0.6 = 抽六成。</li>
+            <li>部队<b>飞行途中不参战</b>，到达才结算：目标是自己的地 → 兵力相加（增援）；是敌方或中立 → 兵力相减，减成负数就易主。</li>
+            <li>占领全图或对方地块清零即胜；180 秒平分则按地块数判胜负。</li>
+          </ol>
+          <p style="margin-top:10px">最短能跑的算法只有 15 行 —— 点「覆盖编辑器」，然后按「应用并重开」就能看它打：</p>
+          <div class="snip">
+            <div class="snip-head">
+              <b>最小骨架</b><span>攒够兵 → 找最弱的目标 → 抽 70% 过去</span>
+              <button class="mini-btn" data-snip="basic">覆盖编辑器</button>
+            </div>
+            <pre data-pre="basic"></pre>
+          </div>
+        </section>
+
+        <section>
+          <h4>② ctx 有哪些东西<em>每轮都能读</em></h4>
+          <table class="api-tbl">
+            <tr><th>字段</th><th>类型</th><th>说明</th></tr>
+            <tr><td>ctx.mine</td><td>数组</td><td>我的地块，元素是下面的「地块对象」。开局 3 块</td></tr>
+            <tr><td>ctx.enemies</td><td>数组</td><td>敌方地块</td></tr>
+            <tr><td>ctx.neutrals</td><td>数组</td><td>中立地块（owner 为 -1）</td></tr>
+            <tr><td>ctx.cells</td><td>数组</td><td>全图所有地块，选目标时遍历它</td></tr>
+            <tr><td>ctx.incoming</td><td>数组</td><td>正打向<b>我</b>的敌军，每项 <code>{to, from, amount, eta}</code>，eta 是还有几秒到达</td></tr>
+            <tr><td>ctx.ordersLeft</td><td>数字</td><td>本轮还能发几条指令，初始 4，send 成功就 -1</td></tr>
+            <tr><td>ctx.me</td><td>数字</td><td>我方编号（0 或 1，每局随机，别写死）</td></tr>
+            <tr><td>ctx.cols / rows</td><td>数字</td><td>棋盘列数 / 行数</td></tr>
+            <tr><td>ctx.time / tick</td><td>数字</td><td>已进行秒数 / 决策回合数</td></tr>
+            <tr><td>ctx.dist(a, b)</td><td>函数</td><td>两地块的格距（欧氏距离），判断远近用它</td></tr>
+            <tr><td>ctx.eta(a, b)</td><td>函数</td><td>从 a 飞到 b 要几秒（= 格距 × 0.3）</td></tr>
+            <tr><td>ctx.send(f, t, r)</td><td>函数</td><td>出兵。成功返回 true，非法返回 false 并记一次违规</td></tr>
+            <tr><td>ctx.rand()</td><td>函数</td><td>种子化随机数 [0,1)，同种子可复现，别用 Math.random</td></tr>
+          </table>
+        </section>
+
+        <section>
+          <h4>③ 地块对象长什么样</h4>
+          <table class="api-tbl">
+            <tr><th>字段</th><th>类型</th><th>说明</th></tr>
+            <tr><td>id</td><td>数字</td><td>唯一编号，<code>send</code> 和 <code>dist</code> 都靠它</td></tr>
+            <tr><td>owner</td><td>数字</td><td>归属：等于 <code>ctx.me</code> 是我的，-1 是中立，其余是敌方</td></tr>
+            <tr><td>troops</td><td>数字</td><td>当前驻军（整数）</td></tr>
+            <tr><td>cap</td><td>数字</td><td>驻军上限：普通 110，城池 180</td></tr>
+            <tr><td>rate</td><td>数字</td><td>每秒产兵：普通 1.9，城池 3.4</td></tr>
+            <tr><td>type</td><td>字符串</td><td><code>'plain'</code> 普通星球 / <code>'city'</code> 城池</td></tr>
+            <tr><td>c / r</td><td>数字</td><td>列 / 行坐标，想自己算距离可以用</td></tr>
+          </table>
+          <p style="margin-top:8px">初始驻军会被游戏随机化（每格 20~90 左右），所以别硬编码阈值，按 <code>troops</code> 相对比较。</p>
+        </section>
+
+        <section>
+          <h4>④ 四个常用片段<em>点「插入」会贴到光标处</em></h4>
+          <div class="snip">
+            <div class="snip-head"><b>救火增援</b><span>来袭兵力超过守军就派最近的兵去救</span>
+              <button class="mini-btn" data-snip="fire">插入</button></div>
+            <pre data-pre="fire"></pre>
+          </div>
+          <div class="snip">
+            <div class="snip-head"><b>集火一个目标</b><span>用满 4 条指令，先把兵算够再发，别添油</span>
+              <button class="mini-btn" data-snip="focus">插入</button></div>
+            <pre data-pre="focus"></pre>
+          </div>
+          <div class="snip">
+            <div class="snip-head"><b>边境留守</b><span>贴着敌人的地块只出 35%，后方才敢出 80%</span>
+              <button class="mini-btn" data-snip="reserve">插入</button></div>
+            <pre data-pre="reserve"></pre>
+          </div>
+          <div class="snip">
+            <div class="snip-head"><b>打分选目标</b><span>价值 ÷（所需兵力 + 距离），城池和敌地加权重</span>
+              <button class="mini-btn" data-snip="score">插入</button></div>
+            <pre data-pre="score"></pre>
+          </div>
+        </section>
+
+        <section>
+          <h4>⑤ 报错了对号入座</h4>
+          <table class="err-tbl">
+            <tr><td>decide is not a function</td><td>函数必须叫 <code>decide</code>，而且不能定义在别的函数里面</td></tr>
+            <tr><td>xxx is not defined</td><td>变量名写错；代码跑在沙箱里，<code>document</code>、<code>window</code>、<code>fetch</code> 都用不了</td></tr>
+            <tr><td>只能从自己的地块出兵</td><td><code>send</code> 的第一个参数用了敌方或中立地块的 id</td></tr>
+            <tr><td>ratio 必须在 (0,1] 内</td><td>比例传了 0、负数、大于 1，或者传成了字符串</td></tr>
+            <tr><td>超出单次决策指令上限</td><td>一轮 send 超过 4 次。循环里加 <code>if (ctx.ordersLeft &lt;= 0) break;</code></td></tr>
+            <tr><td>地块 xx 兵力不足（&lt;2）</td><td>该地块兵太少。出兵前判断 <code>troops &gt;= 3</code></td></tr>
+            <tr><td>算法异常：...</td><td>运行时报错，具体信息会显示在编辑器下方的状态条里</td></tr>
+          </table>
+        </section>
+
+        <section>
+          <h4>⑥ 三个调试技巧</h4>
+          <p>1. <b>边跑边看</b>：<code>console.log(ctx.time, ctx.mine.length)</code> 的输出在浏览器控制台（F12）里，每 0.2 秒一条。</p>
+          <p>2. <b>先自检再开局</b>：点面板上的「自检」，它会用当前棋盘和难度跑 8 局，报语法、非法指令、异常和胜率，比一局一局看快得多。</p>
+          <p>3. <b>改动要能对比</b>：模拟是确定性的（固定步长 + 种子化随机），同一套代码配同一批种子结果完全一致，改一行就能看出差别。</p>
+          <p>4. <b>写不出思路就抄</b>：点「范例」载入推荐算法（对内置 AI 胜率 99%+），先跑通再改，是上手最快的方式。</p>
+        </section>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 代码自检结果 ============ -->
+  <div class="overlay hidden" id="checkOverlay">
+    <div class="sheet">
+      <h3>代码自检</h3>
+      <pre id="checkOut"></pre>
+      <div class="btns">
+        <button id="btnCheckClose">关闭</button>
+        <button class="go" id="btnCheckDocs">看手册</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 结算 ============ -->
+  <section id="screen-result" class="screen">
+    <div class="result-card">
+      <div>
+        <div class="verdict" id="verdict">大胜</div>
+        <div class="verdict-sub" id="verdictSub">歼灭敌军，用时 62 秒</div>
+      </div>
+
+      <div class="stat-grid">
+        <div><span>用时</span><b id="stTime">62s</b></div>
+        <div><span>难度</span><b id="stLevel">普通</b></div>
+        <div><span>我方地块</span><b id="stMine">96</b></div>
+        <div><span>敌方地块</span><b id="stFoe">0</b></div>
+        <div><span>我方出兵</span><b id="stOrders">38 次</b></div>
+        <div><span>模式</span><b id="stMode">鼠标</b></div>
+      </div>
+
+      <div class="result-actions">
+        <button class="btn-retry" id="btnRetry">再 来 一 局</button>
+        <button class="btn-save hidden" id="btnSaveCode">保存我的算法给下一局当对手</button>
+        <div class="save-note hidden" id="saveNote">已保存 · 下一局敌方将使用这套算法</div>
+        <button class="btn-home" id="btnHome">返回主菜单</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script type="text/plain" id="presetAlgo">
+// ============================================================
+// 《沙场对决》领地攻防算法 · 推荐版
+// 设计：贪心性价比 + 威胁响应 + 边境留守 + 反击空虚目标
+// 实测（30 组种子 × 正反换边 × 三种棋盘）：对内置 AI 99%+，
+//      对贪心基准 87%，对集火基准 79%，自我对弈 50%，零非法指令
+// 用法：整段粘进游戏「代码模式」的编辑器，或算法实验场
+// ============================================================
+function decide(ctx) {
+  if (!ctx.mine.length) return;
+
+  // ---------- 超参数（已用批量对局调过，改了要重新验证） ----------
+  const KEEP_MIN = 4;          // 每块地至少留多少兵
+  const RESERVE = 0.10;        // 常规按比例留守
+  const BORDER_RESERVE = 0.35; // 靠近敌方时提高留守比例（防集火）
+  const BORDER_RANGE = 1.5;    // 多近算"边境"
+  const MARGIN = 1;            // 攻城多带一点，抵消对方产量
+  const CITY_W = 3.2;          // 城池价值
+  const ENEMY_W = 3.0;         // 敌方地块价值（比中立地优先）
+  const COUNTER_W = 1.5;       // 刚出兵的敌方地块此刻空虚，值得反击
+  const DIST_W = 2.8;          // 距离惩罚（远距离出兵性价比低）
+  const SAFE = 1.05;           // 守军 > 来袭×1.05 视为守得住（宁早增援）
+  const REINFORCE = 1.15;      // 增援补到来袭的 1.15 倍
+  const AGGRESSIVE_AT = 2.0;   // 地块数领先 2 倍 → 激进收尾
+  const AGGRESSIVE_RESERVE = 0.12;
+
+  // ---------- 1. 威胁评估：把来袭部队按目标地块合并 ----------
+  const threat = {};
+  for (const inc of ctx.incoming) {
+    const t = threat[inc.to] || (threat[inc.to] = { amount: 0, eta: 99 });
+    t.amount += inc.amount;
+    if (inc.eta < t.eta) t.eta = inc.eta;
+  }
+
+  const mineById = {};
+  for (const m of ctx.mine) mineById[m.id] = m;
+
+  // ---------- 2. 防守：守不住的先救，再从最近的空闲星球补兵 ----------
+  const busy = {};
+  for (const id in threat) {
+    if (ctx.ordersLeft <= 0) return;
+    const cell = mineById[id];
+    if (!cell) continue;
+    const inc = threat[id];
+    if (cell.troops > inc.amount * SAFE) continue; // 守得住，不浪费兵力
+
+    const need = Math.ceil(inc.amount * REINFORCE) - cell.troops;
+    if (need <= 0) continue;
+
+    const helpers = ctx.mine
+      .filter(m => m.id !== cell.id && !busy[m.id] && !threat[m.id] && m.troops > KEEP_MIN + 8)
+      .sort((a, b) => (ctx.dist(a.id, cell.id) - ctx.dist(b.id, cell.id)) || (b.troops - a.troops));
+
+    if (helpers.length) {
+      const h = helpers[0];
+      const send = Math.min(h.troops - KEEP_MIN, need + 4);
+      if (send >= 4 && ctx.send(h.id, cell.id, Math.min(1, send / h.troops))) busy[h.id] = 1;
+    }
+  }
+
+  // ---------- 3. 进攻/扩张准备 ----------
+  let enemyCount = 0;
+  const enemyCells = [];
+  for (const c of ctx.cells) {
+    if (c.owner !== ctx.me && c.owner !== -1) { enemyCount++; enemyCells.push(c); }
+  }
+  const aggressive = enemyCount > 0 && ctx.mine.length / enemyCount > AGGRESSIVE_AT;
+  const baseReserve = aggressive ? AGGRESSIVE_RESERVE : RESERVE;
+
+  const enemySent = {}; // 刚出兵的敌方地块 id（此刻驻军空虚）
+  for (const inc of ctx.incoming) enemySent[inc.from] = 1;
+
+  const srcs = ctx.mine.filter(m => !busy[m.id]).sort((a, b) => b.troops - a.troops);
+  const planned = {}; // 已被前面指令预定打掉的兵力，避免 4 条指令全砸一处
+
+  // ---------- 4. 逐块出兵：给每个「出发地 × 目标」算性价比 ----------
+  for (const src of srcs) {
+    if (ctx.ordersLeft <= 0) break;
+    if (busy[src.id]) continue;
+
+    let reserve = baseReserve;
+    for (const e of enemyCells) {
+      if (ctx.dist(src.id, e.id) <= BORDER_RANGE) { reserve = Math.max(reserve, BORDER_RESERVE); break; }
+    }
+
+    const avail = src.troops - Math.max(KEEP_MIN, src.troops * reserve);
+    if (avail < 8) continue;
+
+    let best = null, bestScore = 0;
+    for (const t of ctx.cells) {
+      if (t.owner === ctx.me) continue;
+
+      const remain = t.troops - (planned[t.id] || 0);
+      const want = Math.max(1, remain) + MARGIN + 1;
+      if (want > avail) continue; // 打不起就不打
+
+      let value = 1;
+      if (t.type === 'city') value += CITY_W;
+      if (t.owner !== -1) value += ENEMY_W;
+      if (enemySent[t.id]) value += COUNTER_W;
+
+      const score = value / (want + DIST_W * ctx.dist(src.id, t.id));
+      if (score > bestScore) { bestScore = score; best = { t, want }; }
+    }
+
+    if (best) {
+      const ratio = Math.min(1, (best.want + 2) / src.troops);
+      if (ctx.send(src.id, best.t.id, ratio)) {
+        busy[src.id] = 1;
+        planned[best.t.id] = (planned[best.t.id] || 0) + Math.floor(src.troops * ratio);
+      }
+    }
+  }
+}
+</script>
+<script src="engine/sim.js"></script>
+<script src="engine/bots.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var Sim = window.Sim, Bots = window.Bots, CFG = Sim.CFG;
+  var W = 720, H = 1080, PAD = 14;
+  var LS_SETTINGS = 'sw.settings.v1';
+  var LS_ALGO = 'sw.algo.v1';
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  // ---------- 状态 ----------
+  var app = {
+    screen: 'menu',
+    settings: { size: 'normal', level: 'normal', mode: 'mouse', volume: 60, speed: 1 },
+    saved: { code: null, version: 0 },
+    game: null,
+    bots: { me: null, foe: null },
+    rand: [null, null],
+    acc: 0,
+    paused: false,
+    over: false,
+    raf: 0,
+    last: 0,
+    selection: [],
+    pending: false,
+    drag: null,
+    algoErr: 0, algoErrMsg: '', codeHintEl: null, codeHintTxt: '',
+    CELL: 70, offX: 0, offY: 0
+  };
+
+  // ---------- 存档 ----------
+  function loadStore() {
+    try {
+      var s = JSON.parse(localStorage.getItem(LS_SETTINGS) || 'null');
+      if (s) {
+        ['size', 'level', 'mode', 'volume', 'speed'].forEach(function (k) {
+          if (s[k] !== undefined) app.settings[k] = s[k];
+        });
+      }
+      var a = JSON.parse(localStorage.getItem(LS_ALGO) || 'null');
+      if (a && a.code) app.saved = a;
+    } catch (e) { /* 忽略损坏的存档 */ }
+  }
+  function saveStore() {
+    try {
+      localStorage.setItem(LS_SETTINGS, JSON.stringify(app.settings));
+      localStorage.setItem(LS_ALGO, JSON.stringify(app.saved));
+    } catch (e) { /* 隐私模式下忽略 */ }
+  }
+
+  // ---------- 音效 ----------
+  var audio = { ctx: null, gain: null };
+  function ensureAudio() {
+    if (audio.ctx) return;
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      audio.ctx = new AC();
+      audio.gain = audio.ctx.createGain();
+      audio.gain.gain.value = app.settings.volume / 100;
+      audio.gain.connect(audio.ctx.destination);
+    } catch (e) { audio.ctx = null; }
+  }
+  function beep(freq, dur, vol, type) {
+    if (!audio.ctx || app.settings.volume <= 0) return;
+    try {
+      var o = audio.ctx.createOscillator(), g = audio.ctx.createGain();
+      o.type = type || 'triangle';
+      o.frequency.value = freq;
+      g.gain.value = vol;
+      g.gain.exponentialRampToValueAtTime(0.0001, audio.ctx.currentTime + dur);
+      o.connect(g); g.connect(audio.gain);
+      o.start(); o.stop(audio.ctx.currentTime + dur);
+    } catch (e) { /* 忽略 */ }
+  }
+  function setVolume(v) {
+    app.settings.volume = v;
+    if (audio.gain) audio.gain.gain.value = v / 100;
+    $('volLabel').textContent = v + '%';
+    $('vol').value = v;
+    $('vol').style.setProperty('--p', v + '%');
+    saveStore();
+  }
+
+  // ---------- 界面切换 ----------
+  function show(name) {
+    app.screen = name;
+    ['menu', 'game', 'result'].forEach(function (k) {
+      $('screen-' + k).classList.toggle('active', k === name);
+    });
+    if (name === 'game') requestAnimationFrame(fitCanvas);
+  }
+
+  function toast(msg) {
+    var t = $('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(t._timer);
+    t._timer = setTimeout(function () { t.classList.remove('show'); }, 2000);
+  }
+
+  // ---------- 菜单渲染 ----------
+  function syncMenu() {
+    document.querySelectorAll('#segSize button').forEach(function (b) {
+      b.classList.toggle('on', b.dataset.size === app.settings.size);
+    });
+    document.querySelectorAll('#segLevel button').forEach(function (b) {
+      b.classList.toggle('on', b.dataset.level === app.settings.level);
+    });
+    document.querySelectorAll('#segMode button').forEach(function (b) {
+      b.classList.toggle('on', b.dataset.mode === app.settings.mode);
+    });
+    var note = $('oppNote');
+    if (app.saved && app.saved.code) {
+      note.innerHTML = '敌方 AI：<b>你的算法 v' + app.saved.version + '</b>（保存于本机）' +
+        '<button id="btnClearAlgo2">改回难度 AI</button>';
+      $('btnClearAlgo2').onclick = clearAlgo;
+    } else {
+      note.innerHTML = '敌方 AI：<b>' + Bots.PRESETS[app.settings.level].name + '难度 AI</b>（可在结算页把胜利算法存成下局对手）';
+    }
+  }
+
+  function clearAlgo() {
+    app.saved = { code: null, version: 0 };
+    saveStore();
+    syncMenu();
+    toast('已清除保存的算法，敌方改回难度 AI');
+  }
+
+  // ---------- 画布 ----------
+  var cv, ctx;
+  function fitCanvas() {
+    if (!cv) return;
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    cv.width = Math.round(W * dpr);
+    cv.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    var box = $('stage').getBoundingClientRect();
+    var availH = box.height - 12, availW = box.width - 12;
+    var scale = Math.min(availW / W, availH / H, 1);
+    if (!isFinite(scale) || scale <= 0) return;
+    cv.style.width = (W * scale) + 'px';
+    cv.style.height = (H * scale) + 'px';
+  }
+
+  function layoutBoard() {
+    var g = app.game;
+    var cols = g ? g.cols : 8, rows = g ? g.rows : 12;
+    app.CELL = Math.min((W - PAD * 2) / cols, (H - PAD * 2) / rows);
+    app.offX = (W - app.CELL * cols) / 2;
+    app.offY = (H - app.CELL * rows) / 2;
+  }
+  function cx(c) { return app.offX + (c + 0.5) * app.CELL; }
+  function cy(r) { return app.offY + (r + 0.5) * app.CELL; }
+  function cellAt(px, py) {
+    if (!app.game) return null;
+    var c = Math.floor((px - app.offX) / app.CELL);
+    var r = Math.floor((py - app.offY) / app.CELL);
+    if (c < 0 || c >= app.game.cols || r < 0 || r >= app.game.rows) return null;
+    return app.game.cells[r * app.game.cols + c];
+  }
+
+  var COLORS = {
+    '-1': { fill: '#5b6785', light: '#7c88a6', dark: '#3f4a63' },
+    '0': { fill: '#1ea7c8', light: '#5fe0ff', dark: '#0b6c8a' },
+    '1': { fill: '#c93a76', light: '#ff7fb2', dark: '#8b1e4c' }
+  };
+
+  var stars = (function () {
+    var rnd = Sim.mulberry32(20261101);
+    var arr = [];
+    for (var i = 0; i < 160; i++) {
+      arr.push({ x: rnd() * W, y: rnd() * H, r: rnd() * 1.5 + 0.3, a: rnd() * 0.6 + 0.15 });
+    }
+    return arr;
+  })();
+
+  function drawScene() {
+    var g = app.game;
+    var bg = ctx.createLinearGradient(0, 0, W, H);
+    bg.addColorStop(0, '#070c1a');
+    bg.addColorStop(0.5, '#0a1024');
+    bg.addColorStop(1, '#080d1c');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.fillStyle = '#ffffff';
+    for (var i = 0; i < stars.length; i++) {
+      var s = stars[i];
+      ctx.globalAlpha = s.a;
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    if (!g) return;
+
+    var CELL = app.CELL;
+    var R = Math.max(9, CELL * 0.37);
+
+    // 航道
+    ctx.strokeStyle = 'rgba(120,160,255,.05)';
+    ctx.lineWidth = 1;
+    for (var r = 0; r < g.rows; r++) {
+      for (var c = 0; c < g.cols; c++) {
+        if (c + 1 < g.cols) {
+          ctx.beginPath(); ctx.moveTo(cx(c), cy(r)); ctx.lineTo(cx(c + 1), cy(r)); ctx.stroke();
+        }
+        if (r + 1 < g.rows) {
+          ctx.beginPath(); ctx.moveTo(cx(c), cy(r)); ctx.lineTo(cx(c), cy(r + 1)); ctx.stroke();
+        }
+      }
+    }
+
+    // 星球
+    for (var k = 0; k < g.cells.length; k++) {
+      var cell = g.cells[k];
+      var col = COLORS[cell.owner];
+      var x = cx(cell.c), y = cy(cell.r);
+
+      ctx.globalCompositeOperation = 'lighter';
+      var glow = ctx.createRadialGradient(x, y, R * 0.65, x, y, R * 1.75);
+      glow.addColorStop(0, col.light + '44');
+      glow.addColorStop(1, col.light + '00');
+      ctx.fillStyle = glow;
+      ctx.beginPath(); ctx.arc(x, y, R * 1.75, 0, Math.PI * 2); ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+
+      var body = ctx.createRadialGradient(x - R * 0.35, y - R * 0.4, R * 0.12, x, y, R);
+      body.addColorStop(0, col.light);
+      body.addColorStop(0.65, col.fill);
+      body.addColorStop(1, col.dark);
+      ctx.fillStyle = body;
+      ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2); ctx.fill();
+
+      if (cell.type === 'city') {
+        ctx.strokeStyle = 'rgba(255,255,255,.5)';
+        ctx.lineWidth = Math.max(1, R * 0.06);
+        ctx.beginPath(); ctx.arc(x, y - R * 0.58, R * 0.16, 0, Math.PI * 2); ctx.stroke();
+      }
+
+      var txt = String(Math.round(cell.troops));
+      var fs = Math.round(R * (txt.length > 2 ? 0.62 : 0.72));
+      ctx.font = 'bold ' + fs + 'px ui-sans-serif, system-ui, "PingFang SC"';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = 'rgba(0,0,0,.45)';
+      ctx.fillText(txt, x + 1, y + 2);
+      ctx.fillStyle = cell.owner === -1 ? '#dbe4f5' : '#ffffff';
+      ctx.fillText(txt, x, y + 1);
+
+      // 选中
+      if (app.selection.indexOf(cell.id) >= 0) {
+        ctx.strokeStyle = 'rgba(255,255,255,.9)';
+        ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc(x, y, R + 4, 0, Math.PI * 2); ctx.stroke();
+      }
+    }
+
+    // 目标提示
+    var target = app.drag && app.drag.target;
+    if (target && app.selection.indexOf(target.id) < 0) {
+      ctx.save();
+      ctx.setLineDash([6, 5]);
+      ctx.strokeStyle = 'rgba(180,210,255,.75)';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.arc(cx(target.c), cy(target.r), R + 6, 0, Math.PI * 2); ctx.stroke();
+      ctx.restore();
+    }
+
+    // 行军
+    for (var m = 0; m < g.armies.length; m++) {
+      var a = g.armies[m];
+      var from = g.cells[a.from], to = g.cells[a.to];
+      if (!from || !to) continue;
+      var t = 1 - a.remaining / a.total;
+      var x0 = cx(from.c), y0 = cy(from.r), x1 = cx(to.c), y1 = cy(to.r);
+      var hx = x0 + (x1 - x0) * t, hy = y0 + (y1 - y0) * t;
+      var ac = COLORS[a.owner === 0 ? '0' : '1'];
+      ctx.strokeStyle = ac.light + '40';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([3, 6]);
+      ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(hx, hy); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.globalCompositeOperation = 'lighter';
+      var lg = ctx.createRadialGradient(hx, hy, 0, hx, hy, Math.max(6, R * 0.35));
+      lg.addColorStop(0, '#ffffff');
+      lg.addColorStop(0.45, ac.light);
+      lg.addColorStop(1, ac.light + '00');
+      ctx.fillStyle = lg;
+      ctx.beginPath(); ctx.arc(hx, hy, Math.max(6, R * 0.35), 0, Math.PI * 2); ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+    }
+  }
+
+  // ---------- 一局开始 ----------
+  function compileUser(code) {
+    var fn;
+    try {
+      fn = new Function('"use strict";\n' + code + '\n;return (typeof decide === "function") ? decide : null;')();
+    } catch (e) {
+      throw new Error('语法错误：' + e.message);
+    }
+    if (typeof fn !== 'function') throw new Error('代码里必须定义 decide(ctx) 函数');
+    return fn;
+  }
+
+  function startGame(sameSettings) {
+    ensureAudio();
+    var cfg = Sim.boardSize(app.settings.size);
+    var seed = Math.floor(Math.random() * 1e9);
+    app.game = Sim.createGame({ seed: seed, cols: cfg.cols, rows: cfg.rows, cities: cfg.cities });
+    app.rand = [Sim.mulberry32(seed * 7 + 1), Sim.mulberry32(seed * 13 + 5)];
+    app.acc = 0;
+    app.paused = false;
+    app.over = false;
+    app.selection = [];
+    app.pending = false;
+    app.drag = null;
+    app.last = 0;
+
+    // 我方：代码模式下用编辑器里的算法
+    app.bots.me = null;
+    if (app.settings.mode === 'code') {
+      try {
+        var f = compileUser($('codeBox').value);
+        app.bots.me = f;
+      } catch (e) {
+        toast(e.message);
+        app.bots.me = null;
+      }
+    }
+
+    // 敌方：优先用已保存的算法
+    app.bots.foe = null;
+    if (app.saved && app.saved.code) {
+      try { app.bots.foe = compileUser(app.saved.code); }
+      catch (e) { app.bots.foe = Bots.makeAI(app.settings.level); }
+    } else {
+      app.bots.foe = Bots.makeAI(app.settings.level);
+    }
+
+    layoutBoard();
+    $('codePanel').classList.toggle('show', app.settings.mode === 'code');
+    $('dragControls').classList.toggle('hidden', app.settings.mode === 'code');
+    app.algoErr = 0; app.algoErrMsg = ''; app.codeHintTxt = '';
+    $('pauseVeil').classList.add('hidden');
+    $('hudSize').textContent = cfg.cols + '×' + cfg.rows;
+    $('hudLevel').textContent = Bots.PRESETS[app.settings.level].name;
+    $('hudMode').textContent = { mouse: '鼠标', touch: '触屏', code: '代码' }[app.settings.mode];
+    $('modeHint').textContent = app.settings.mode === 'touch'
+      ? '手指按住己方星球拖到目标星球松手出兵；拖动途中扫过其他星球可多路齐发'
+      : '点选己方星球（可多选）再点目标星球出兵，也可以直接拖拽';
+
+    show('game');
+    fitCanvas();
+    drawScene();
+    updateHud();
+    cancelAnimationFrame(app.raf);
+    app.raf = requestAnimationFrame(loop);
+    beep(520, 0.05, 0.05);
+  }
+
+  // ---------- 主循环 ----------
+  function loop(ts) {
+    if (!app.game) return;
+    if (!app.last) app.last = ts;
+    var dtReal = Math.min(0.1, (ts - app.last) / 1000);
+    app.last = ts;
+
+    if (!app.paused && !app.over) {
+      var dt = dtReal * app.settings.speed;
+      var remain = dt;
+      while (remain > 1e-9 && !app.game.over) {
+        var d = Math.min(CFG.DT, remain);
+        Sim.step(app.game, d);
+        remain -= d;
+        app.acc += d;
+        if (app.acc >= CFG.DECISION_INTERVAL - 1e-9) {
+          app.acc -= CFG.DECISION_INTERVAL;
+          decisionTick();
+        }
+      }
+      if (app.game.over) endGame();
+    }
+
+    drawScene();
+    updateHud();
+    app.raf = requestAnimationFrame(loop);
+  }
+
+  function decisionTick() {
+    var g = app.game;
+    var s0 = [], s1 = [];
+
+    if (app.bots.me) {
+      var c0 = Sim.makeContext(g, 0, app.rand[0], s0);
+      try { app.bots.me(c0); } catch (e) {
+        app.algoErr = (app.algoErr || 0) + 1;
+        if (app.algoErr === 1) {
+          var m = (e && e.message) ? e.message : String(e);
+          app.algoErrMsg = m;
+          toast('算法运行异常：' + m);
+          if (app.codeHintEl) app.codeHintEl.classList.add('bad');
+        }
+      }
+    }
+    var c1 = Sim.makeContext(g, 1, app.rand[1], s1);
+    try { app.bots.foe(c1); } catch (e) { }
+
+    Sim.applyOrders(g, 0, s0);
+    Sim.applyOrders(g, 1, s1);
+  }
+
+  // 代码面板底部状态条：让玩家自己看出算法有没有在干活
+  function setHint(txt, bad) {
+    var el = app.codeHintEl;
+    if (!el) return;
+    if (txt !== app.codeHintTxt) { el.textContent = txt; app.codeHintTxt = txt; }
+    el.classList.toggle('bad', !!bad);
+  }
+
+  function updateCodeHint() {
+    if (!app.codeHintEl || !app.game) return;
+    if (app.settings.mode === 'code' && !app.bots.me) {
+      setHint('算法没编译成功，我方不会出兵 —— 点「自检」看错在哪', true);
+      return;
+    }
+    var st = app.game.stats || {};
+    var illegal = st.illegalP0 || 0;
+    var exc = app.algoErr || 0;
+    var txt = '已出兵 ' + (st.ordersP0 || 0) + ' 次 · 非法 ' + illegal + ' · 异常 ' + exc;
+    if (exc && app.algoErrMsg) txt += ' · ' + app.algoErrMsg;
+    else if (illegal) {
+      var last = null;
+      var errs = app.game.errors || [];
+      for (var i = errs.length - 1; i >= 0; i--) {
+        if (errs[i].player === 0) { last = errs[i]; break; }
+      }
+      if (last) txt += ' · ' + last.msg;
+    }
+    setHint(txt, illegal > 0 || exc > 0);
+  }
+
+  function updateHud() {
+    var g = app.game;
+    if (!g) return;
+    var m = 0, f = 0, mt = 0, ft = 0;
+    for (var i = 0; i < g.cells.length; i++) {
+      var c = g.cells[i];
+      if (c.owner === 0) { m++; mt += c.troops; }
+      else if (c.owner === 1) { f++; ft += c.troops; }
+    }
+    $('hudMine').textContent = m;
+    $('hudFoe').textContent = f;
+    $('hudMineTroops').textContent = Math.round(mt) + ' 兵';
+    $('hudFoeTroops').textContent = Math.round(ft) + ' 兵';
+    var mm = Math.floor(g.time / 60), ss = Math.floor(g.time % 60);
+    $('hudTime').textContent = String(mm).padStart(2, '0') + ':' + String(ss).padStart(2, '0');
+    if (app.settings.mode === 'code') updateCodeHint();
+  }
+
+  // ---------- 结算 ----------
+  function endGame() {
+    app.over = true;
+    var g = app.game;
+    var mine = 0, foe = 0;
+    for (var i = 0; i < g.cells.length; i++) {
+      if (g.cells[i].owner === 0) mine++;
+      else if (g.cells[i].owner === 1) foe++;
+    }
+
+    var win = g.winner === 0, draw = g.winner === 'draw';
+    var v = $('verdict');
+    v.className = 'verdict ' + (draw ? 'draw' : win ? 'win' : 'lose');
+    v.textContent = draw ? '平 局' : win ? '大 胜' : '败 北';
+    $('verdictSub').textContent = draw
+      ? '超时且兵力相当'
+      : (win ? '歼灭敌军' : '全军覆没') + '，用时 ' + g.time.toFixed(0) + ' 秒';
+
+    $('stTime').textContent = g.time.toFixed(0) + 's';
+    $('stLevel').textContent = Bots.PRESETS[app.settings.level].name;
+    $('stMine').textContent = mine;
+    $('stFoe').textContent = foe;
+    $('stOrders').textContent = g.stats.ordersP0 + ' 次';
+    $('stMode').textContent = { mouse: '鼠标', touch: '触屏', code: '代码' }[app.settings.mode];
+
+    var showSave = app.settings.mode === 'code';
+    $('btnSaveCode').classList.toggle('hidden', !showSave);
+    $('btnSaveCode').textContent = '保存我的算法给下一局当对手';
+    $('btnSaveCode').disabled = false;
+    $('saveNote').classList.add('hidden');
+
+    show('result');
+    beep(win ? 840 : 220, 0.25, 0.08, win ? 'sine' : 'sawtooth');
+  }
+
+  function saveAlgo() {
+    var code = $('codeBox').value.trim();
+    if (!code) { toast('编辑器里还没有代码'); return; }
+    try { compileUser(code); } catch (e) { toast(e.message); return; }
+    app.saved = { code: code, version: (app.saved.version || 0) + 1, time: Date.now() };
+    saveStore();
+    syncMenu();
+    $('btnSaveCode').disabled = true;
+    $('saveNote').classList.remove('hidden');
+    $('saveNote').textContent = '已保存为 v' + app.saved.version + ' · 下一局敌方将使用这套算法';
+    toast('已保存 v' + app.saved.version + '，下局敌方将使用它');
+    beep(660, 0.09, 0.07, 'sine');
+  }
+
+  // ---------- 输入（鼠标 / 触屏） ----------
+  function toLocal(e) {
+    var rect = cv.getBoundingClientRect();
+    return {
+      x: (e.clientX - rect.left) * (W / rect.width),
+      y: (e.clientY - rect.top) * (H / rect.height)
+    };
+  }
+
+  function hitCell(p, slop) {
+    var cell = cellAt(p.x, p.y);
+    if (cell) return cell;
+    if (!slop) return null;
+    // 触屏：允许在星球外一点范围内命中最近的己方星球
+    var best = null, bestD = Infinity;
+    var g = app.game;
+    for (var i = 0; i < g.cells.length; i++) {
+      var c = g.cells[i];
+      if (c.owner !== 0) continue;
+      var d = Math.hypot(cx(c.c) - p.x, cy(c.r) - p.y);
+      if (d < bestD) { bestD = d; best = c; }
+    }
+    return bestD <= app.CELL * 0.6 ? best : null;
+  }
+
+  function sendOrders(sources, target) {
+    if (!target || !app.game || app.over || app.paused) return;
+    var pct = Number($('pct').value) / 100;
+    var sent = 0;
+    sources.forEach(function (src) {
+      if (src.owner !== 0 || src.troops < 2 || src.id === target.id) return;
+      if (Sim.trySend(app.game, 0, src.id, target.id, pct)) sent++;
+    });
+    if (sent) beep(600, 0.035, 0.04);
+  }
+
+  function onDown(e) {
+    if (!app.game || app.over || app.paused) return;
+    ensureAudio();
+    if (app.settings.mode === 'code') return; // 代码模式只看不打
+    var p = toLocal(e);
+    var cell = hitCell(p, app.settings.mode === 'touch');
+
+    // 已有多选（鼠标点选流程）→ 这一下作为目标
+    if (app.pending && app.selection.length) {
+      if (cell && app.selection.indexOf(cell) < 0) {
+        sendOrders(app.selection, cell);
+        app.selection = [];
+        app.pending = false;
+        drawScene();
+        return;
+      }
+      if (!cell) { app.selection = []; app.pending = false; drawScene(); return; }
+    }
+
+    if (!cell || cell.owner !== 0 || cell.troops < 2) return;
+    app.selection = [cell.id];
+    app.pending = false;
+    app.drag = { startX: cell.id, target: null, moved: false };
+    e.target.setPointerCapture && e.target.setPointerCapture(e.pointerId);
+    drawScene();
+  }
+
+  function onMove(e) {
+    if (!app.drag || !app.game) return;
+    var p = toLocal(e);
+    var cell = cellAt(p.x, p.y);
+    if (cell && cell.owner === 0 && cell.troops >= 2 && app.selection.indexOf(cell.id) < 0) {
+      app.selection.push(cell.id); // 扫过多选
+    }
+    app.drag.target = cell;
+    app.drag.moved = true;
+    drawScene();
+  }
+
+  function onUp(e) {
+    if (!app.drag || !app.game) return;
+    var target = app.drag.target;
+    var moved = app.drag.moved;
+    var sources = app.selection.map(function (id) { return app.game.cells[id]; }).filter(Boolean);
+
+    if (target && app.selection.indexOf(target.id) < 0) {
+      sendOrders(sources, target);
+      app.selection = [];
+      app.pending = false;
+    } else if (moved || app.settings.mode !== 'mouse') {
+      // 拖动后没有落在有效目标 / 触屏模式抬手：清空
+      app.selection = [];
+      app.pending = false;
+    } else {
+      // 鼠标单击己方星球：保留选中，等待下一次点击目标
+      app.pending = true;
+    }
+    app.drag = null;
+    drawScene();
+  }
+
+  // ---------- 二级设置 ----------
+  function openSettings() {
+    $('settingsOverlay').classList.remove('hidden');
+    $('btnPauseToggle').textContent = app.paused ? '继续' : '暂停';
+  }
+  function closeSettings() {
+    $('settingsOverlay').classList.add('hidden');
+  }
+  function setPaused(flag) {
+    app.paused = flag;
+    $('pauseVeil').classList.toggle('hidden', !flag);
+    $('btnPauseToggle').textContent = flag ? '继续' : '暂停';
+    $('btnPauseQuick').textContent = flag ? '▶' : '⏸';
+    if (!flag) { app.last = 0; }
+  }
+
+  function syncSpeed() {
+    document.querySelectorAll('#segSpeed button').forEach(function (b) {
+      b.classList.toggle('on', Number(b.dataset.speed) === app.settings.speed);
+    });
+    $('speedLabel').textContent = app.settings.speed + 'x';
+  }
+
+  // ---------- 代码模式 ----------
+  var CODE_TEMPLATE = [
+    '// 每 0.2 秒调用一次，用 ctx.send(出发星球, 目标星球, 出兵比例) 指挥部队',
+    '// ctx.mine / ctx.enemies / ctx.neutrals / ctx.incoming / ctx.dist / ctx.rand',
+    'function decide(ctx) {',
+    '  // 1) 救火：来袭兵力超过守军就去增援',
+    '  const need = {};',
+    '  for (const inc of ctx.incoming) need[inc.to] = (need[inc.to] || 0) + inc.amount;',
+    '  for (const id in need) {',
+    '    const cell = ctx.mine.find(m => m.id === +id);',
+    '    if (!cell || need[id] < cell.troops) continue;',
+    '    const helper = ctx.mine',
+    '      .filter(m => m.id !== cell.id && m.troops >= 20)',
+    '      .sort((a, b) => ctx.dist(a.id, cell.id) - ctx.dist(b.id, cell.id))[0];',
+    '    if (helper) { ctx.send(helper.id, cell.id, 0.6); return; }',
+    '  }',
+    '',
+    '  // 2) 扩张：打「打得起、最弱」的目标，城池优先',
+    '  const mine = ctx.mine.slice().sort((a, b) => b.troops - a.troops);',
+    '  for (const src of mine) {',
+    '    if (src.troops < 25 || ctx.ordersLeft <= 0) continue;',
+    '    let best = null;',
+    '    for (const t of ctx.cells) {',
+    '      if (t.owner === ctx.me) continue;',
+    '      if (t.troops > src.troops * 0.65) continue;',
+    '      if (!best || t.troops < best.troops || (t.type === "city" && best.type !== "city")) best = t;',
+    '    }',
+    '    if (best) ctx.send(src.id, best.id, 0.7);',
+    '  }',
+    '}'
+  ].join('\n');
+
+  // ---------- 手册片段 ----------
+  var SNIPPETS = {
+    basic: [
+      '// 最小可运行算法：攒够兵 → 打最弱的目标',
+      'function decide(ctx) {',
+      '  if (!ctx.mine.length) return;',
+      '',
+      '  // 从兵最多的地块出兵',
+      '  const src = ctx.mine.slice().sort((a, b) => b.troops - a.troops)[0];',
+      '  if (!src || src.troops < 20) return;   // 兵太少，先攒',
+      '',
+      '  // 找打得起、驻军最少的目标',
+      '  let best = null;',
+      '  for (const t of ctx.cells) {',
+      '    if (t.owner === ctx.me) continue;          // 自己的地不打',
+      '    if (t.troops + 3 > src.troops) continue;   // 打不起就不打',
+      '    if (!best || t.troops < best.troops) best = t;',
+      '  }',
+      '  if (best) ctx.send(src.id, best.id, 0.7);',
+      '}'
+    ].join('\n'),
+    fire: [
+      '// —— 救火：先按目标合并来袭兵力，守不住就派最近的兵去补 ——',
+      'const threat = {};',
+      'for (const inc of ctx.incoming) {',
+      '  threat[inc.to] = (threat[inc.to] || 0) + inc.amount;',
+      '}',
+      'for (const id in threat) {',
+      '  const cell = ctx.mine.find(m => m.id === +id);',
+      '  if (!cell) continue;',
+      '  if (cell.troops > threat[id]) continue;   // 守得住，不浪费兵',
+      '  const helper = ctx.mine',
+      '    .filter(m => m.id !== cell.id && m.troops > 15)',
+      '    .sort((a, b) => ctx.dist(a.id, cell.id) - ctx.dist(b.id, cell.id))[0];',
+      '  if (helper) ctx.send(helper.id, cell.id, 0.5);',
+      '}'
+    ].join('\n'),
+    focus: [
+      '// —— 集火：4 条指令打同一个目标，先把兵算够再发，别添油 ——',
+      'const target = ctx.cells',
+      '  .filter(t => t.owner !== ctx.me)',
+      '  .sort((a, b) => (b.type === "city") - (a.type === "city") || a.troops - b.troops)[0];',
+      'if (target) {',
+      '  const need = target.troops + 2;',
+      '  let sent = 0;',
+      '  const srcs = ctx.mine.slice()',
+      '    .sort((a, b) => ctx.dist(a.id, target.id) - ctx.dist(b.id, target.id));',
+      '  for (const s of srcs) {',
+      '    if (sent >= need || ctx.ordersLeft <= 0) break;',
+      '    const give = Math.min(s.troops - 3, need - sent);',
+      '    if (give < 3) continue;',
+      '    if (ctx.send(s.id, target.id, give / s.troops)) sent += give;',
+      '  }',
+      '}'
+    ].join('\n'),
+    reserve: [
+      '// —— 边境留守：贴着敌人的地块只出 35%，后方才敢出 80% ——',
+      'function reserveOf(ctx, cell) {',
+      '  for (const e of ctx.enemies) {',
+      '    if (ctx.dist(cell.id, e.id) <= 1.5) return 0.35;',
+      '  }',
+      '  return 0.8;',
+      '}',
+      '// 出兵那行改成：',
+      '// ctx.send(src.id, target.id, reserveOf(ctx, src));'
+    ].join('\n'),
+    score: [
+      '// —— 打分选目标：价值 ÷（所需兵力 + 距离惩罚）——',
+      'const src = ctx.mine.slice().sort((a, b) => b.troops - a.troops)[0];',
+      'if (src && src.troops >= 15) {',
+      '  let pick = null, bestScore = 0;',
+      '  for (const t of ctx.cells) {',
+      '    if (t.owner === ctx.me) continue;',
+      '    const want = t.troops + 2;',
+      '    if (want > src.troops - 4) continue;',
+      '    let value = 1;',
+      '    if (t.type === "city") value += 3.2;   // 城池产兵快，更值钱',
+      '    if (t.owner !== -1) value += 3.0;      // 优先打敌方，断他后路',
+      '    const score = value / (want + 2.8 * ctx.dist(src.id, t.id));',
+      '    if (score > bestScore) { bestScore = score; pick = t; }',
+      '  }',
+      '  if (pick) ctx.send(src.id, pick.id, 0.8);',
+      '}'
+    ].join('\n')
+  };
+
+  function fillSnippets() {
+    var pres = document.querySelectorAll('#docsOverlay pre[data-pre]');
+    for (var i = 0; i < pres.length; i++) {
+      var k = pres[i].getAttribute('data-pre');
+      if (SNIPPETS[k] && !pres[i].textContent) pres[i].textContent = SNIPPETS[k];
+    }
+  }
+
+  function openDocs() {
+    fillSnippets();
+    $('docsOverlay').classList.remove('hidden');
+    $('docsOverlay').querySelector('.docs-body').scrollTop = 0;
+  }
+  function closeDocs() { $('docsOverlay').classList.add('hidden'); }
+
+  function insertSnippet(key) {
+    var code = SNIPPETS[key];
+    if (!code) return;
+    var box = $('codeBox');
+    if (key === 'basic') {
+      var cur = box.value.trim();
+      if (cur && cur !== CODE_TEMPLATE.trim() && !window.confirm('会覆盖编辑器里现有的代码，继续？')) return;
+      box.value = code;
+      box.scrollTop = 0;
+      toast('已覆盖编辑器 · 点「应用并重开」看它打');
+      return;
+    }
+    var s = box.selectionStart || 0, e = box.selectionEnd || 0;
+    var v = box.value;
+    var head = v.slice(0, s), tail = v.slice(e);
+    var pad = (head && !/\n\s*$/.test(head)) ? '\n\n' : '';
+    box.value = head + pad + code + '\n\n' + tail;
+    var pos = (head + pad + code).length;
+    box.focus();
+    try { box.setSelectionRange(pos, pos); } catch (err) { }
+    toast('片段已插入光标处 · 记得放在 decide(ctx) 里面');
+  }
+
+  // ---------- 代码自检 ----------
+  function escHtml(s) {
+    return String(s).replace(/[&<>]/g, function (c) {
+      return c === '&' ? '&amp;' : (c === '<' ? '&lt;' : '&gt;');
+    });
+  }
+
+  function showCheck(html) {
+    $('checkOut').innerHTML = html;
+    $('checkOverlay').classList.remove('hidden');
+  }
+
+  function runCheck() {
+    var fn;
+    try { fn = compileUser($('codeBox').value); }
+    catch (e) {
+      showCheck('<span class="no">✗ 编译失败</span>\n' + escHtml(e.message) +
+        '\n\n改完再点一次「自检」。');
+      return;
+    }
+
+    var cfg = Sim.boardSize(app.settings.size);
+    var level = app.settings.level;
+    var N = 8, win = 0, draw = 0, lose = 0, illegal = 0, exc = 0, tsum = 0, osum = 0;
+    var firstErr = '';
+
+    for (var i = 0; i < N; i++) {
+      var r;
+      try {
+        r = Sim.runGame({
+          seed: 10007 + i * 733, cols: cfg.cols, rows: cfg.rows, cities: cfg.cities,
+          bot0: fn, bot1: Bots.makeAI(level)
+        });
+      } catch (e2) { exc++; continue; }
+      if (r.winner === 0) win++;
+      else if (r.winner === 'draw') draw++;
+      else lose++;
+      illegal += (r.stats.illegalP0 || 0);
+      exc += (r.stats.exceptions || 0);
+      tsum += r.time;
+      osum += (r.stats.ordersP0 || 0);
+      if (!firstErr && r.errors) {
+        for (var k = 0; k < r.errors.length; k++) {
+          if (r.errors[k].player === 0) { firstErr = r.errors[k].msg; break; }
+        }
+      }
+    }
+
+    var rate = Math.round((win + draw * 0.5) / N * 100);
+    var clean = illegal === 0 && exc === 0;
+    var out = [];
+    out.push('<span class="ok">✓ 编译通过</span>  decide(ctx) 可以调用');
+    out.push('<b>对局</b>  ' + N + ' 局 · ' + cfg.label + ' · ' + Bots.PRESETS[level].name + '难度');
+    out.push('<b>战绩</b>  ' + win + ' 胜 ' + draw + ' 平 ' + lose + ' 负   ' +
+      '<span class="' + (rate >= 50 ? 'ok' : 'no') + '">得分率 ' + rate + '%</span>');
+    out.push('<b>节奏</b>  平均 ' + (tsum / N).toFixed(1) + ' 秒 · 平均出兵 ' + Math.round(osum / N) + ' 次');
+    out.push('<b>违规</b>  <span class="' + (clean ? 'ok' : 'no') + '">非法指令 ' + illegal +
+      ' · 异常 ' + exc + '</span>');
+    if (!clean && firstErr) out.push('        <span class="warn">→ ' + escHtml(firstErr) + '</span>');
+    if (illegal > 0) out.push('        <span class="warn">→ 循环里加 if (ctx.ordersLeft &lt;= 0) break;</span>');
+    if (exc > 0) out.push('        <span class="warn">→ 具体异常写在编辑器下方状态条 / 浏览器控制台</span>');
+    out.push('');
+    if (illegal + exc > 0) {
+      out.push('<span class="no">先把上面的非法指令 / 异常修掉，再看胜率才有意义。</span>');
+    } else if (rate >= 60) {
+      out.push('<span class="ok">能打了 · 想更强就试着加上手册第 ④ 节的「救火增援 + 边境留守」。</span>');
+    } else {
+      out.push('<span class="warn">还偏弱 · 先把手册第 ④ 节的「救火增援」和「集火」加进去。</span>');
+    }
+
+    showCheck(out.join('\n'));
+  }
+
+  // ---------- 事件绑定 ----------
+  function bind() {
+    $('segSize').onclick = function (e) {
+      var b = e.target.closest('[data-size]'); if (!b) return;
+      app.settings.size = b.dataset.size; saveStore(); syncMenu();
+    };
+    $('segLevel').onclick = function (e) {
+      var b = e.target.closest('[data-level]'); if (!b) return;
+      app.settings.level = b.dataset.level; saveStore(); syncMenu();
+    };
+    $('segMode').onclick = function (e) {
+      var b = e.target.closest('[data-mode]'); if (!b) return;
+      app.settings.mode = b.dataset.mode; saveStore(); syncMenu();
+    };
+    $('btnStart').onclick = function () { startGame(); };
+    $('btnClearAlgo').onclick = function (e) { e.preventDefault(); clearAlgo(); };
+
+    $('btnPauseQuick').onclick = function () {
+      if (!app.game || app.over) return;
+      setPaused(!app.paused);
+    };
+    $('btnSettings').onclick = openSettings;
+    $('btnResume').onclick = function () { setPaused(false); closeSettings(); };
+    $('btnPauseToggle').onclick = function () { setPaused(!app.paused); };
+    $('btnRestartMid').onclick = function () { closeSettings(); startGame(); };
+    $('btnHomeMid').onclick = function () {
+      closeSettings();
+      app.over = true; app.game = null;
+      cancelAnimationFrame(app.raf);
+      syncMenu(); show('menu');
+    };
+
+    $('vol').oninput = function () { setVolume(Number(this.value)); };
+    $('segSpeed').onclick = function (e) {
+      var b = e.target.closest('[data-speed]'); if (!b) return;
+      app.settings.speed = Number(b.dataset.speed);
+      saveStore(); syncSpeed();
+    };
+
+    $('pct').oninput = function () {
+      $('pctLabel').textContent = this.value + '%';
+      this.style.setProperty('--p', this.value + '%');
+    };
+
+    $('btnRetry').onclick = function () { startGame(); };
+    $('btnHome').onclick = function () {
+      app.over = true; app.game = null;
+      cancelAnimationFrame(app.raf);
+      syncMenu(); show('menu');
+    };
+    $('btnSaveCode').onclick = saveAlgo;
+
+    $('btnApplyCode').onclick = function () {
+      try { compileUser($('codeBox').value); }
+      catch (e) { toast(e.message); return; }
+      app.savedDraft = $('codeBox').value;
+      try { localStorage.setItem('sw.draft.v1', $('codeBox').value); } catch (e) { }
+      startGame();
+      toast('已应用新算法，重新开局');
+    };
+    $('btnLoadPreset').onclick = function () {
+      $('codeBox').value = $('presetAlgo').textContent.trim();
+      toast('已载入推荐算法 · 点「应用并重开」生效');
+    };
+    $('btnCodeHelp').onclick = openDocs;
+    $('btnDocsClose').onclick = closeDocs;
+    $('btnCheckCode').onclick = runCheck;
+    $('btnCheckClose').onclick = function () { $('checkOverlay').classList.add('hidden'); };
+    $('btnCheckDocs').onclick = function () { $('checkOverlay').classList.add('hidden'); openDocs(); };
+    $('docsOverlay').onclick = function (e) {
+      if (e.target === $('docsOverlay')) closeDocs();
+      var b = e.target.closest('[data-snip]');
+      if (b) insertSnippet(b.getAttribute('data-snip'));
+    };
+    $('checkOverlay').onclick = function (e) {
+      if (e.target === $('checkOverlay')) $('checkOverlay').classList.add('hidden');
+    };
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape') return;
+      if (!$('checkOverlay').classList.contains('hidden')) { $('checkOverlay').classList.add('hidden'); return; }
+      if (!$('docsOverlay').classList.contains('hidden')) closeDocs();
+    });
+
+    // 画布交互
+    cv.addEventListener('pointerdown', onDown);
+    cv.addEventListener('pointermove', onMove);
+    cv.addEventListener('pointerup', onUp);
+    cv.addEventListener('pointercancel', function () {
+      app.drag = null; app.selection = []; app.pending = false; drawScene();
+    });
+    cv.addEventListener('wheel', function (e) {
+      if (app.settings.mode === 'code') return;
+      e.preventDefault();
+      var el = $('pct');
+      var v = Number(el.value) + (e.deltaY > 0 ? -5 : 5);
+      v = Math.max(10, Math.min(100, v));
+      el.value = v;
+      $('pctLabel').textContent = v + '%';
+      el.style.setProperty('--p', v + '%');
+    }, { passive: false });
+
+    window.addEventListener('resize', fitCanvas);
+    window.addEventListener('orientationchange', function () { setTimeout(fitCanvas, 120); });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && app.screen === 'game') {
+        if ($('settingsOverlay').classList.contains('hidden')) openSettings();
+        else closeSettings();
+      }
+      if (e.key === ' ' && app.screen === 'game' && !app.over) {
+        e.preventDefault();
+        setPaused(!app.paused);
+      }
+    });
+  }
+
+  // ---------- 启动 ----------
+  cv = $('cv');
+  ctx = cv.getContext('2d');
+  app.codeHintEl = $('codeHint');
+  loadStore();
+
+  // 代码草稿
+  var draft = null;
+  try { draft = localStorage.getItem('sw.draft.v1'); } catch (e) { }
+  $('codeBox').value = draft || CODE_TEMPLATE;
+
+  bind();
+  syncMenu();
+  syncSpeed();
+  setVolume(app.settings.volume);
+  setPaused(false);
+  layoutBoard();
+  fitCanvas();
+  window.addEventListener('load', fitCanvas);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitCanvas);
+
+  // 自动化测试钩子（不影响正常游玩）
+  window.__sw = {
+    get app() { return app; },
+    startGame: startGame,
+    endGame: endGame,
+    openSettings: openSettings,
+    closeSettings: closeSettings,
+    setPaused: setPaused,
+    decisionTick: decisionTick,
+    tick: function (n) { for (var i = 0; i < (n || 1); i++) { Sim.step(app.game, Sim.CFG.DT); } },
+    runCheck: runCheck,
+    openDocs: openDocs,
+    insertSnippet: insertSnippet,
+    drawScene: drawScene,
+    updateHud: updateHud
+  };
+})();
+</script>
+</body>
+</html>

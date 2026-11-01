@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>沙场对决 · 星际战场</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; height: 100%; overflow: hidden;
+    background: #04060d;
+    color: #e6eeff;
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+    user-select: none;
+  }
+  #app { height: 100%; display: flex; flex-direction: column; gap: 8px; padding: 10px; }
+
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 12px; border-radius: 14px;
+    background: linear-gradient(180deg, rgba(20,29,54,.95), rgba(9,14,28,.95));
+    border: 1px solid rgba(110,170,255,.16);
+    box-shadow: 0 6px 20px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.05);
+  }
+  .side { display: flex; align-items: baseline; gap: 5px; font-size: 13px; color: #cfe0ff; }
+  .side .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .you .dot { background: radial-gradient(circle at 32% 30%, #d9f7ff, #35c9ff 55%, #0a4f86); box-shadow: 0 0 9px rgba(63,205,255,.85); }
+  .foe .dot { background: radial-gradient(circle at 32% 30%, #ffd6ef, #ff4fa8 55%, #8c1354); box-shadow: 0 0 9px rgba(255,86,170,.8); }
+  .side b { font-size: 19px; font-variant-numeric: tabular-nums; color: #eef6ff; }
+  .side i { font-style: normal; color: #7f92b7; font-size: 12px; }
+  .side em { font-style: normal; color: #8397bd; font-size: 12px; margin-left: 2px; }
+  .mid { display: flex; align-items: center; gap: 10px; }
+  #timer { font-variant-numeric: tabular-nums; font-size: 14px; color: #9db0d4; }
+  #restart {
+    border: 1px solid rgba(120,180,255,.32);
+    background: linear-gradient(180deg, #22375f, #16233f);
+    color: #d6e7ff; font-size: 12px;
+    padding: 6px 12px; border-radius: 9px; cursor: pointer;
+  }
+  #restart:active { transform: scale(.96); }
+
+  #stage { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
+  canvas {
+    max-width: 100%; max-height: 100%; display: block;
+    border-radius: 16px; touch-action: none; cursor: crosshair;
+    border: 1px solid rgba(110,170,255,.15);
+    box-shadow: 0 0 34px rgba(38,86,180,.22);
+  }
+
+  footer {
+    display: flex; flex-direction: column; gap: 8px;
+    padding: 10px 14px; border-radius: 14px;
+    background: linear-gradient(180deg, rgba(20,29,54,.95), rgba(9,14,28,.95));
+    border: 1px solid rgba(110,170,255,.16);
+    box-shadow: 0 6px 20px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.05);
+  }
+  .diffbox { display: flex; align-items: center; gap: 10px; font-size: 13px; color: #a8badb; }
+  .diffs {
+    display: flex; gap: 4px; padding: 3px; border-radius: 10px;
+    background: rgba(255,255,255,.05);
+    border: 1px solid rgba(120,180,255,.14);
+  }
+  .diffs button {
+    border: none; background: transparent; color: #9db0d4;
+    font-size: 12px; font-weight: 600; font-family: inherit;
+    padding: 5px 13px; border-radius: 8px; cursor: pointer;
+    transition: color .15s, background .15s;
+  }
+  .diffs button.is-on { color: #04131f; }
+  .diffs button[data-diff=easy].is-on { background: linear-gradient(180deg, #8ff0c4, #37c98e); box-shadow: 0 0 12px rgba(60,220,160,.4); }
+  .diffs button[data-diff=normal].is-on { background: linear-gradient(180deg, #8ce9ff, #2bb7f5); box-shadow: 0 0 12px rgba(63,205,255,.45); }
+  .diffs button[data-diff=hard].is-on { background: linear-gradient(180deg, #ffa8d8, #ff4fa8); box-shadow: 0 0 12px rgba(255,86,170,.45); }
+  .diffs button:active { transform: scale(.96); }
+
+  .pctbox { display: flex; align-items: center; gap: 10px; font-size: 13px; color: #a8badb; }
+  .pctbox input[type=range] {
+    flex: 1; -webkit-appearance: none; height: 4px; border-radius: 3px;
+    background: linear-gradient(90deg, #35c9ff var(--p,50%), rgba(255,255,255,.13) var(--p,50%));
+    outline: none;
+  }
+  .pctbox input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%;
+    background: #f2fbff; border: 3px solid #35c9ff; cursor: pointer;
+    box-shadow: 0 0 10px rgba(63,205,255,.6);
+  }
+  #pctLabel { width: 44px; text-align: right; font-variant-numeric: tabular-nums; color: #e6f4ff; font-weight: 600; }
+  .tip { font-size: 11px; color: #7c8db2; line-height: 1.5; }
+
+  @media (max-width: 480px) {
+    #app { padding: 8px; gap: 6px; }
+    header { padding: 7px 9px; gap: 6px; }
+    .side { font-size: 11px; gap: 4px; min-width: 0; }
+    .side b { font-size: 16px; }
+    .side em, .side i { font-size: 10px; }
+    .side em { margin-left: 0; }
+    #timer { font-size: 12px; }
+    #restart { padding: 5px 10px; }
+    footer { padding: 8px 10px; gap: 7px; }
+    .diffs button { padding: 5px 9px; font-size: 11px; }
+    .tip { font-size: 10px; }
+  }
+  /* 极窄屏（如 320px 真机）：牺牲「兵数」保数字与块数可见 */
+  @media (max-width: 360px) {
+    .side em { display: none; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="side you"><span class="dot"></span><b id="youCells">0</b><i>块</i><em id="youTroops">0 兵</em></div>
+    <div class="mid"><span id="timer">00:00</span><button id="restart">重开</button></div>
+    <div class="side foe"><em id="foeTroops">0 兵</em><i>块</i><b id="foeCells">0</b><span class="dot"></span></div>
+  </header>
+
+  <div id="stage"><canvas id="cv"></canvas></div>
+
+  <footer>
+    <div class="diffbox">
+      <span>难度</span>
+      <div class="diffs" id="diffs">
+        <button type="button" data-diff="easy">简单</button>
+        <button type="button" data-diff="normal" class="is-on">普通</button>
+        <button type="button" data-diff="hard">困难</button>
+      </div>
+    </div>
+    <div class="pctbox">
+      <span>出兵比例</span>
+      <input id="pct" type="range" min="10" max="100" step="5" value="50">
+      <span id="pctLabel">50%</span>
+    </div>
+    <div class="tip">从我方星球按住拖到目标星球松手出兵 · 拖动途中扫过其他我方星球可多路齐发 · 滚轮 / 滑杆微调出兵比例 · 键盘 1/2/3 切难度 · <a href="algo-lab/index.html" target="_blank" style="color:#4ee0a8;">⌨ 算法实验场：写代码指挥军队</a></div>
+  </footer>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ---------- 基础常量 ----------
+  const TAU = Math.PI * 2;
+  const COLS = 8, ROWS = 12, CELL = 88, PAD = 10;
+  const W = COLS * CELL + PAD * 2;
+  const H = ROWS * CELL + PAD * 2;
+
+  const PLAYER = 0, AI = 1, NEUTRAL = -1;
+
+  // 星球半径（视觉层，不影响网格判定）
+  const R = CELL * 0.41;
+
+  // 阵营皮肤：太空风（玩家=青蓝，AI=洋红，中立=灰蓝）
+  const SKINS = {
+    [PLAYER]:  { light: '#dcf8ff', mid: '#35c9ff', dark: '#0d5b93', deep: '#03192e', rgb: '63,205,255' },
+    [AI]:      { light: '#ffdcf1', mid: '#ff4fa8', dark: '#8c1354', deep: '#26051a', rgb: '255,86,170' },
+    [NEUTRAL]: { light: '#cfdcf0', mid: '#6d80a2', dark: '#2c3852', deep: '#0a1020', rgb: '140,165,205' }
+  };
+
+  const CAP_NORMAL = 110;
+  const CAP_CITY = 180;
+  const RATE_NORMAL = 1.9;
+  const RATE_CITY = 3.4;
+  const ARMY_SPEED = 300; // px/s
+
+  // ---------- AI 难度配置（唯一参数来源，改这里即可调平衡） ----------
+  // thinkMin/Max : 思考间隔（秒）
+  // advantage    : 发动进攻所需兵力优势倍数（需要压过去的兵力 = 目标守军 × advantage + 4）
+  // maxGroup     : 单次集结地块数上限
+  // rateMul      : AI 地块产量系数（相对基准产量）
+  // defend       : 是否具备「防守/增援」判断（困难档专属）
+  // scan         : 目标搜索半径（格）
+  // defendRange  : 增援搜索半径（格）
+  const DIFFICULTY = {
+    easy:   { name: '简单', thinkMin: 1.70, thinkMax: 2.40, advantage: 1.60, maxGroup: 2, rateMul: 0.85, defend: false, scan: 2, defendRange: 2 },
+    normal: { name: '普通', thinkMin: 1.10, thinkMax: 1.80, advantage: 1.25, maxGroup: 3, rateMul: 1.00, defend: false, scan: 2, defendRange: 2 },
+    hard:   { name: '困难', thinkMin: 0.60, thinkMax: 1.00, advantage: 1.00, maxGroup: 5, rateMul: 1.15, defend: true,  scan: 3, defendRange: 3 }
+  };
+  const DEFAULT_DIFF = 'normal';
+
+  // AI 出兵比例：常规留 30% 守家；兵力不够时全军压上
+  const AI_RESERVE_RATIO = 0.7;
+  const AI_ALLIN_RATIO = 1.0;
+
+  // ---------- 伪随机（固定种子，保证星空/星球表面稳定不闪） ----------
+  function makeRng(seed) {
+    let s = seed >>> 0;
+    return function () {
+      s = s + 0x6D2B79F5 | 0;
+      let t = Math.imul(s ^ s >>> 15, 1 | s);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+  function hash2(c, r) {
+    let h = Math.imul(c + 1, 374761393) + Math.imul(r + 1, 668265263);
+    h = Math.imul(h ^ h >>> 13, 1274126177);
+    return (h ^ h >>> 16) >>> 0;
+  }
+
+  // ---------- 画布 ----------
+  const stage = document.getElementById('stage');
+  const cv = document.getElementById('cv');
+  const ctx = cv.getContext('2d');
+  const FONT = 'ui-sans-serif, system-ui, "PingFang SC", "Microsoft YaHei", sans-serif';
+
+  let DPR = 1;
+  let bgCanvas = null;      // 星空离屏缓存（只画一次）
+  const gradCache = {};     // owner -> { body, glow }，以原点为中心缓存，靠 translate 复用
+
+  // canvas 有 1px CSS 边框且 box-sizing:border-box，边框会吃掉内容区 2px；
+  // 故按「可用空间 - 边框」求 scale，再补回边框，保证内容区恰好是 W×H 的同一倍数
+  const BORDER = 2;
+  let cssScale = 1;   // 逻辑尺寸 W×H → CSS 内容的统一缩放比（宽高共用，绝不各算各的）
+
+  // 等比缩放唯一入口：读 #stage 可用宽高，宽高取同一个 scale
+  function applyScale() {
+    const availW = Math.max(1, stage.clientWidth - BORDER);
+    const availH = Math.max(1, stage.clientHeight - BORDER);
+    // 上限 1：backing store 固定 W×H×DPR，CSS 放大超过 1 就是拉伸位图 → 模糊
+    cssScale = Math.min(availW / W, availH / H, 1);
+    cv.style.width = (W * cssScale + BORDER) + 'px';
+    cv.style.height = (H * cssScale + BORDER) + 'px';
+  }
+
+  function fitCanvas() {
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    cv.width = Math.round(W * DPR);
+    cv.height = Math.round(H * DPR);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);   // backing store 只放大 DPR；显示尺寸交给 applyScale
+    applyScale();
+    buildBackground();
+  }
+
+  // 深空背景：渐变 + 星云 + 固定种子星点
+  function buildBackground() {
+    bgCanvas = document.createElement('canvas');
+    bgCanvas.width = Math.round(W * DPR);
+    bgCanvas.height = Math.round(H * DPR);
+    const g = bgCanvas.getContext('2d');
+    g.setTransform(DPR, 0, 0, DPR, 0, 0);
+
+    const base = g.createLinearGradient(0, 0, W, H);
+    base.addColorStop(0, '#04060e');
+    base.addColorStop(0.42, '#0a1024');
+    base.addColorStop(0.78, '#0a0c1e');
+    base.addColorStop(1, '#0d0818');
+    g.fillStyle = base;
+    g.fillRect(0, 0, W, H);
+
+    // 柔和星云
+    const nebula = [
+      { x: W * 0.20, y: H * 0.14, r: 320, c: '116,70,205', a: 0.17 },
+      { x: W * 0.84, y: H * 0.58, r: 350, c: '30,124,196', a: 0.14 },
+      { x: W * 0.46, y: H * 0.93, r: 280, c: '88,44,150', a: 0.11 }
+    ];
+    nebula.forEach(n => {
+      const rg = g.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.r);
+      rg.addColorStop(0, 'rgba(' + n.c + ',' + n.a + ')');
+      rg.addColorStop(0.5, 'rgba(' + n.c + ',' + (n.a * 0.38) + ')');
+      rg.addColorStop(1, 'rgba(' + n.c + ',0)');
+      g.fillStyle = rg;
+      g.fillRect(n.x - n.r, n.y - n.r, n.r * 2, n.r * 2);
+    });
+
+    // 星点（固定种子，永不闪烁）
+    const rng = makeRng(20240607);
+    for (let i = 0; i < 470; i++) {
+      const x = rng() * W, y = rng() * H;
+      const rr = 0.35 + rng() * 1.15;
+      const alpha = 0.16 + rng() * 0.74;
+      const tint = rng();
+      const col = tint > 0.84 ? '186,214,255' : (tint > 0.70 ? '255,238,212' : '255,255,255');
+      g.beginPath();
+      g.arc(x, y, rr, 0, TAU);
+      g.fillStyle = 'rgba(' + col + ',' + alpha.toFixed(2) + ')';
+      g.fill();
+      if (rng() > 0.955) {
+        const hr = rr * 7;
+        const rg = g.createRadialGradient(x, y, 0, x, y, hr);
+        rg.addColorStop(0, 'rgba(' + col + ',.45)');
+        rg.addColorStop(1, 'rgba(' + col + ',0)');
+        g.fillStyle = rg;
+        g.beginPath(); g.arc(x, y, hr, 0, TAU); g.fill();
+      }
+    }
+  }
+
+  function gradOf(owner) {
+    let set = gradCache[owner];
+    if (set) return set;
+    const sk = SKINS[owner];
+    const body = ctx.createRadialGradient(-R * 0.34, -R * 0.36, R * 0.06, 0, 0, R * 1.02);
+    body.addColorStop(0, sk.light);
+    body.addColorStop(0.26, sk.mid);
+    body.addColorStop(0.68, sk.dark);
+    body.addColorStop(1, sk.deep);
+    const glow = ctx.createRadialGradient(0, 0, R * 0.90, 0, 0, R * 1.42);
+    glow.addColorStop(0, 'rgba(' + sk.rgb + ',.40)');
+    glow.addColorStop(0.45, 'rgba(' + sk.rgb + ',.13)');
+    glow.addColorStop(1, 'rgba(' + sk.rgb + ',0)');
+    set = gradCache[owner] = { body, glow };
+    return set;
+  }
+
+  // ---------- 游戏状态 ----------
+  let cells, armies, state, drag, timeAcc, aiTimer, rafId, over, elapsed;
+
+  const citySpots = [[2, 2], [5, 3], [3, 6], [6, 8], [1, 9], [4, 4]];
+
+  function rnd(a, b) { return a + Math.random() * (b - a); }
+
+  function makeCell(c, r) {
+    const cell = {
+      c, r,
+      x: PAD + c * CELL,
+      y: PAD + r * CELL,
+      owner: NEUTRAL,
+      troops: 0,
+      type: 'plain',
+      cap: CAP_NORMAL,
+      rate: RATE_NORMAL,
+      flash: 0,
+      scale: 1,
+      ring: false,
+      spots: []
+    };
+    // 星球表面细节：坐标哈希决定，稳定不跳动
+    const h = hash2(c, r);
+    cell.ring = (h % 100) < 18;
+    const rng = makeRng(h || 1);
+    const n = 2 + Math.floor(rng() * 4);
+    for (let i = 0; i < n; i++) {
+      const a = rng() * TAU;
+      const d = (0.18 + rng() * 0.54) * R;
+      cell.spots.push({
+        x: Math.cos(a) * d,
+        y: Math.sin(a) * d,
+        r: 2.4 + rng() * 5.4
+      });
+    }
+    return cell;
+  }
+
+  function reset() {
+    const keepDiff = (state && DIFFICULTY[state.diff]) ? state.diff : DEFAULT_DIFF;
+
+    cells = [];
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) cells.push(makeCell(c, r));
+    }
+    const at = (c, r) => cells[r * COLS + c];
+
+    // 中立驻军
+    cells.forEach(cell => {
+      cell.troops = Math.round(rnd(16, 46));
+    });
+    // 城池
+    citySpots.forEach(([c, r]) => {
+      const cell = at(c, r);
+      cell.type = 'city';
+      cell.cap = CAP_CITY;
+      cell.rate = RATE_CITY;
+      cell.troops = Math.round(rnd(60, 95));
+    });
+
+    // 玩家（左下角）
+    [[0, 10], [0, 11], [1, 11]].forEach(([c, r]) => {
+      const cell = at(c, r);
+      cell.owner = PLAYER; cell.troops = 42; cell.flash = 0;
+    });
+    // 电脑（右上角）
+    [[7, 0], [7, 1], [6, 0]].forEach(([c, r]) => {
+      const cell = at(c, r);
+      cell.owner = AI; cell.troops = 42; cell.flash = 0;
+    });
+
+    armies = [];
+    drag = { active: false, sources: [], cur: null };
+    state = { pct: 0.5, diff: keepDiff };
+    timeAcc = 0;
+    elapsed = 0;
+    aiTimer = DIFFICULTY[state.diff].thinkMin;
+    over = null;
+
+    syncSlider();
+    syncDiff();
+    updateHud();
+    draw();
+  }
+
+  // ---------- 工具 ----------
+  function cellAt(px, py) {
+    // 点击判定始终基于格子边界（画成圆也不会让角落点不到）
+    const c = Math.floor((px - PAD) / CELL);
+    const r = Math.floor((py - PAD) / CELL);
+    if (c < 0 || c >= COLS || r < 0 || r >= ROWS) return null;
+    return cells[r * COLS + c];
+  }
+  function center(cell) { return { x: cell.x + CELL / 2, y: cell.y + CELL / 2 }; }
+  function centerXY(cell) { return { x: cell.x + CELL / 2, y: cell.y + CELL / 2 }; }
+  function dist(a, b) {
+    const p = center(a), q = center(b);
+    return Math.hypot(p.x - q.x, p.y - q.y);
+  }
+  function ownedCells(owner) { return cells.filter(c => c.owner === owner); }
+  function cfg() { return DIFFICULTY[state.diff]; }
+
+  // ---------- 出兵 ----------
+  function launch(sources, target) {
+    if (!target) return;
+    let any = false;
+    sources.forEach(src => {
+      if (src.owner !== PLAYER) return;
+      if (!canReach(src, target)) return;
+      const amt = Math.max(1, Math.floor(src.troops * state.pct));
+      if (src.troops < 2) return;
+      const real = Math.min(amt, src.troops);
+      src.troops -= real;
+      armies.push({
+        owner: src.owner,
+        from: src,
+        to: target,
+        amount: real,
+        t: 0,
+        dur: Math.max(0.25, dist(src, target) / ARMY_SPEED)
+      });
+      any = true;
+    });
+    if (any) beep(520, 0.04, 0.05);
+    return any;
+  }
+
+  // 全图可打，距离越远行军越久（长距离出兵会被半路截胡）
+  function canReach(a, b) {
+    return a !== b;
+  }
+
+  function resolveArmies(dt) {
+    for (let i = armies.length - 1; i >= 0; i--) {
+      const a = armies[i];
+      a.t += dt / a.dur;
+      if (a.t < 1) continue;
+      const cell = a.to;
+      if (cell.owner === a.owner) {
+        cell.troops += a.amount;
+        cell.flash = Math.max(cell.flash, 0.35);
+      } else {
+        cell.troops -= a.amount;
+        if (cell.troops < 0) {
+          cell.owner = a.owner;
+          cell.troops = -cell.troops;
+          cell.flash = 1;
+          cell.scale = 0.86;
+          if (a.owner === PLAYER) beep(760, 0.06, 0.06);
+          else beep(220, 0.07, 0.05);
+          checkWin();
+        } else {
+          cell.flash = Math.max(cell.flash, 0.6);
+        }
+      }
+      armies.splice(i, 1);
+    }
+  }
+
+  function grow(dt) {
+    const mul = cfg().rateMul;
+    for (const cell of cells) {
+      if (cell.owner === NEUTRAL) continue;
+      if (cell.troops >= cell.cap) continue;
+      const rate = cell.owner === AI ? cell.rate * mul : cell.rate;
+      cell.troops = Math.min(cell.cap, cell.troops + rate * dt);
+    }
+  }
+
+  // ---------- AI ----------
+  function aiThink(dt) {
+    aiTimer -= dt;
+    if (aiTimer > 0 || over) return;
+    const c0 = cfg();
+    aiTimer = rnd(c0.thinkMin, c0.thinkMax);
+
+    const mine = ownedCells(AI);
+    if (!mine.length) return;
+
+    // 困难档：先看家。能救则救，本回合不再进攻
+    if (c0.defend && aiDefend(c0)) return;
+
+    const myTotal = mine.reduce((s, c) => s + c.troops, 0);
+
+    // 候选目标：搜索半径内、且非己方
+    let best = null, bestScore = -Infinity;
+    for (const cell of mine) {
+      const around = nearby(cell, c0.scan);
+      for (const t of around) {
+        if (t.owner === AI) continue;
+        // 「够不够打」：需要压过去的兵力 = 守军 × 优势倍数 + 少量余量
+        const need = Math.ceil(t.troops * c0.advantage) + 4;
+        let score = (t.type === 'city' ? 60 : 20) - t.troops * 0.5;
+        if (t.owner === PLAYER) score += 45;
+        score += (myTotal > 200 ? 12 : 0);
+        score -= Math.max(0, need - cell.troops) * 0.6; // 单块凑不出就降权，但不说死
+        if (score > bestScore) { bestScore = score; best = { src: cell, target: t, need }; }
+      }
+    }
+    if (!best) return;
+
+    // 集结：相邻己方且有余力的星球一起打（上限由难度决定）
+    const group = [best.src];
+    neighbors(best.src).forEach(n => {
+      if (group.length >= c0.maxGroup) return;
+      if (n.owner === AI && n.troops >= 20) group.push(n);
+    });
+
+    // 明确的两段式判断：先按「留 30% 守家」算；不足则全军压上；仍不足则放弃
+    let ratio = AI_RESERVE_RATIO;
+    if (sumSendable(group, ratio) < best.need) ratio = AI_ALLIN_RATIO;
+    const sendable = sumSendable(group, ratio);
+    if (sendable < best.need) return; // 凑不齐，不打
+
+    group.forEach(src => {
+      if (src.troops < 8) return;
+      const amt = Math.min(src.troops, Math.floor(src.troops * ratio));
+      if (amt < 1) return;
+      src.troops -= amt;
+      armies.push({
+        owner: AI, from: src, to: best.target, amount: amt, t: 0,
+        dur: Math.max(0.25, dist(src, best.target) / ARMY_SPEED)
+      });
+    });
+  }
+
+  function sumSendable(group, ratio) {
+    let s = 0;
+    for (const c of group) {
+      if (c.troops < 8) continue;
+      s += Math.floor(c.troops * ratio);
+    }
+    return s;
+  }
+
+  // 困难档专属：发现玩家部队正在飞向守不住的关键星球时，从附近调兵增援
+  function aiDefend(c0) {
+    const threats = [];
+    for (const a of armies) {
+      if (a.owner !== PLAYER) continue;
+      if (a.to.owner !== AI) continue;
+      threats.push(a);
+    }
+    if (!threats.length) return false;
+
+    // 同一目标的多支部队合并计算
+    const byTarget = new Map();
+    for (const a of threats) {
+      byTarget.set(a.to, (byTarget.get(a.to) || 0) + a.amount);
+    }
+
+    let acted = false;
+    byTarget.forEach((incoming, target) => {
+      const deficit = incoming - target.troops + 2;
+      if (deficit <= 0) return; // 守得住，不管
+
+      const helpers = nearby(target, c0.defendRange)
+        .filter(c => c.owner === AI && c !== target && c.troops >= 16)
+        .sort((a, b) => b.troops - a.troops);
+
+      let need = deficit;
+      for (const h of helpers) {
+        if (need <= 0) break;
+        const spare = Math.floor(h.troops * 0.6); // 增援也留 40% 守家
+        if (spare < 5) continue;
+        const amt = Math.min(spare, need);
+        h.troops -= amt;
+        armies.push({
+          owner: AI, from: h, to: target, amount: amt, t: 0,
+          dur: Math.max(0.25, dist(h, target) / ARMY_SPEED)
+        });
+        need -= amt;
+        acted = true;
+      }
+    });
+    return acted;
+  }
+
+  function neighbors(cell) {
+    const out = [];
+    for (let dr = -1; dr <= 1; dr++) {
+      for (let dc = -1; dc <= 1; dc++) {
+        if (!dr && !dc) continue;
+        const c = cell.c + dc, r = cell.r + dr;
+        if (c < 0 || c >= COLS || r < 0 || r >= ROWS) continue;
+        out.push(cells[r * COLS + c]);
+      }
+    }
+    return out;
+  }
+
+  function nearby(cell, range) {
+    const out = [];
+    for (let dr = -range; dr <= range; dr++) {
+      for (let dc = -range; dc <= range; dc++) {
+        if (!dr && !dc) continue;
+        const c = cell.c + dc, r = cell.r + dr;
+        if (c < 0 || c >= COLS || r < 0 || r >= ROWS) continue;
+        out.push(cells[r * COLS + c]);
+      }
+    }
+    return out;
+  }
+
+  // ---------- 胜负 ----------
+  function checkWin() {
+    const p = cells.filter(c => c.owner === PLAYER).length;
+    const a = cells.filter(c => c.owner === AI).length;
+    if (p === 0) over = 'lose';
+    else if (a === 0) over = 'win';
+  }
+
+  // ---------- 主循环 ----------
+  let last = 0;
+  function loop(ts) {
+    if (!last) last = ts;
+    let dt = (ts - last) / 1000;
+    last = ts;
+    dt = Math.min(dt, 0.05);
+
+    if (!over) {
+      elapsed += dt;
+      grow(dt);
+      resolveArmies(dt);
+      aiThink(dt);
+    }
+    // 动画量更新
+    for (const cell of cells) {
+      if (cell.flash > 0) cell.flash = Math.max(0, cell.flash - dt * 2.4);
+      cell.scale += (1 - cell.scale) * Math.min(1, dt * 12);
+    }
+
+    draw();
+    updateHud();
+    rafId = requestAnimationFrame(loop);
+  }
+
+  // ---------- 绘制 ----------
+  function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  function draw() {
+    // 深空背景（离屏缓存，每帧只贴一次）
+    if (bgCanvas) ctx.drawImage(bgCanvas, 0, 0, W, H);
+    else { ctx.fillStyle = '#04060e'; ctx.fillRect(0, 0, W, H); }
+
+    // 相邻航道（上下左右，极淡）
+    ctx.strokeStyle = 'rgba(120,175,255,.055)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        const p = centerXY(cells[r * COLS + c]);
+        if (c < COLS - 1) {
+          const q = centerXY(cells[r * COLS + c + 1]);
+          ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y);
+        }
+        if (r < ROWS - 1) {
+          const q = centerXY(cells[(r + 1) * COLS + c]);
+          ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y);
+        }
+      }
+    }
+    ctx.stroke();
+
+    // 大气外发光（叠加模式，一次贴完）
+    ctx.globalCompositeOperation = 'lighter';
+    for (const cell of cells) {
+      const p = centerXY(cell);
+      const g = gradOf(cell.owner).glow;
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.scale(cell.scale, cell.scale);
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(0, 0, R * 1.42, 0, TAU); ctx.fill();
+      ctx.restore();
+    }
+    ctx.globalCompositeOperation = 'source-over';
+
+    // 星球本体
+    for (const cell of cells) {
+      drawPlanet(cell);
+    }
+
+    // 兵力文字（独立一层，保证压在所有星球/光晕之上）
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineJoin = 'round';
+    for (const cell of cells) {
+      const p = centerXY(cell);
+      const txt = Math.round(cell.troops).toString();
+      const fs = txt.length > 2 ? 26 : 30;
+      ctx.font = 'bold ' + fs + 'px ' + FONT;
+      ctx.lineWidth = 4.5;
+      ctx.strokeStyle = 'rgba(2,6,14,.88)';
+      ctx.strokeText(txt, p.x, p.y + 1);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(txt, p.x, p.y + 1);
+    }
+
+    // 悬停目标：虚线圆环
+    if (drag.active && drag.cur && drag.sources.indexOf(drag.cur) < 0) {
+      const t = drag.cur;
+      const ok = reachableFromAny(drag.sources, t);
+      const p = centerXY(t);
+      ctx.save();
+      ctx.setLineDash([6, 6]);
+      ctx.lineWidth = 2.6;
+      ctx.strokeStyle = ok ? 'rgba(150,235,255,.95)' : 'rgba(150,235,255,.35)';
+      ctx.beginPath(); ctx.arc(p.x, p.y, R + 7, 0, TAU); ctx.stroke();
+      ctx.restore();
+    }
+
+    // 行军：发光弹道 + 彗尾
+    for (const a of armies) drawArmy(a);
+
+    // 结算
+    if (over) drawOverlay();
+  }
+
+  function drawPlanet(cell) {
+    const p = centerXY(cell);
+    const sk = SKINS[cell.owner];
+    const isSrc = drag.active && drag.sources.indexOf(cell) >= 0;
+
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.scale(cell.scale, cell.scale);
+
+    // 球体
+    ctx.fillStyle = gradOf(cell.owner).body;
+    ctx.beginPath(); ctx.arc(0, 0, R, 0, TAU); ctx.fill();
+
+    // 陨石坑（凹凸感）
+    for (const sp of cell.spots) {
+      ctx.fillStyle = 'rgba(0,0,0,.17)';
+      ctx.beginPath(); ctx.arc(sp.x, sp.y, sp.r, 0, TAU); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,.11)';
+      ctx.beginPath(); ctx.arc(sp.x - sp.r * 0.26, sp.y - sp.r * 0.26, sp.r * 0.6, 0, TAU); ctx.fill();
+    }
+
+    // 左上受光边缘
+    ctx.strokeStyle = 'rgba(255,255,255,.24)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(0, 0, R - 1, Math.PI * 1.08, Math.PI * 1.92); ctx.stroke();
+
+    // 行星环
+    if (cell.ring) {
+      ctx.save();
+      ctx.rotate(-0.4);
+      ctx.strokeStyle = 'rgba(' + sk.rgb + ',.48)';
+      ctx.lineWidth = 2.2;
+      ctx.beginPath(); ctx.ellipse(0, 0, R * 1.16, R * 0.34, 0, 0, TAU); ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,255,255,.20)';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.ellipse(0, 0, R * 1.30, R * 0.42, 0, 0, TAU); ctx.stroke();
+      ctx.restore();
+    }
+
+    // 城池标记
+    if (cell.type === 'city') {
+      ctx.save();
+      ctx.translate(-R * 0.50, -R * 0.54);
+      ctx.rotate(Math.PI / 4);
+      ctx.fillStyle = 'rgba(255,255,255,.95)';
+      ctx.shadowColor = 'rgba(255,255,255,.9)';
+      ctx.shadowBlur = 6;
+      ctx.fillRect(-3.1, -3.1, 6.2, 6.2);
+      ctx.restore();
+    }
+
+    // 受击 / 占领闪光
+    if (cell.flash > 0) {
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.fillStyle = 'rgba(255,255,255,' + (cell.flash * 0.5).toFixed(3) + ')';
+      ctx.beginPath(); ctx.arc(0, 0, R, 0, TAU); ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+    }
+
+    // 选中：外圈脉冲描边
+    if (isSrc) {
+      const pulse = 0.5 + 0.5 * Math.sin(elapsed * 7);
+      const rr = R + 5 + pulse * 3;
+      ctx.strokeStyle = 'rgba(' + sk.rgb + ',' + (0.45 + 0.5 * pulse).toFixed(2) + ')';
+      ctx.lineWidth = 2.6;
+      ctx.beginPath(); ctx.arc(0, 0, rr, 0, TAU); ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,255,255,.9)';
+      ctx.lineWidth = 1.1;
+      ctx.beginPath(); ctx.arc(0, 0, rr, 0, TAU); ctx.stroke();
+
+      // 实时出兵数角标（保留原有语义）
+      const amt = Math.floor(cell.troops * state.pct);
+      const label = '-' + amt;
+      ctx.font = 'bold 12px ' + FONT;
+      const tw = ctx.measureText(label).width;
+      const bw = tw + 13, bh = 17;
+      const bx = -bw / 2 + 4, by = -R - 13;
+      ctx.fillStyle = 'rgba(4,10,20,.85)';
+      roundRect(bx, by, bw, bh, 8.5);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(' + sk.rgb + ',.9)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.fillStyle = '#eaf8ff';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(label, bx + bw / 2, by + bh / 2 + 0.5);
+    }
+
+    ctx.restore();
+  }
+
+  function drawArmy(a) {
+    const p = center(a.from), q = center(a.to);
+    const sk = SKINS[a.owner];
+    const t = Math.min(1, a.t);
+    const hx = p.x + (q.x - p.x) * t;
+    const hy = p.y + (q.y - p.y) * t;
+    const ang = Math.atan2(q.y - p.y, q.x - p.x);
+    const tail = 20 + Math.min(76, a.amount * 0.85);
+    const cx0 = Math.cos(ang), cy0 = Math.sin(ang);
+    const gx = hx - cx0 * tail, gy = hy - cy0 * tail;
+
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.lineCap = 'round';
+
+    // 弹道
+    const grd = ctx.createLinearGradient(gx, gy, hx, hy);
+    grd.addColorStop(0, 'rgba(' + sk.rgb + ',0)');
+    grd.addColorStop(0.5, 'rgba(' + sk.rgb + ',.34)');
+    grd.addColorStop(1, 'rgba(' + sk.rgb + ',.95)');
+    ctx.strokeStyle = grd;
+    ctx.lineWidth = 2.6 + Math.min(5.5, a.amount * 0.05);
+    ctx.beginPath(); ctx.moveTo(gx, gy); ctx.lineTo(hx, hy); ctx.stroke();
+
+    // 彗尾火花（用稳定偏移，避免每帧抖动）
+    const n = Math.max(4, Math.min(12, Math.round(a.amount / 6)));
+    ctx.fillStyle = 'rgba(' + sk.rgb + ',.9)';
+    for (let i = 0; i < n; i++) {
+      const k = i / n;
+      const jitter = (((i * 37) % 13) / 13) - 0.5;
+      const px = hx - cx0 * (k * tail) - cy0 * jitter * 10;
+      const py = hy - cy0 * (k * tail) + cx0 * jitter * 10;
+      ctx.globalAlpha = (1 - k) * 0.55;
+      ctx.beginPath(); ctx.arc(px, py, (1 - k) * 2.6 + 0.6, 0, TAU); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    // 弹头光晕
+    const hr = 9 + Math.min(9, a.amount * 0.06);
+    const glow = ctx.createRadialGradient(hx, hy, 0, hx, hy, hr * 2.6);
+    glow.addColorStop(0, 'rgba(255,255,255,.95)');
+    glow.addColorStop(0.34, 'rgba(' + sk.rgb + ',.55)');
+    glow.addColorStop(1, 'rgba(' + sk.rgb + ',0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath(); ctx.arc(hx, hy, hr * 2.6, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.arc(hx, hy, hr * 0.42, 0, TAU); ctx.fill();
+
+    ctx.restore();
+  }
+
+  function drawOverlay() {
+    ctx.fillStyle = 'rgba(3,6,14,.62)';
+    ctx.fillRect(0, 0, W, H);
+
+    const win = over === 'win';
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = 'bold 56px ' + FONT;
+    ctx.shadowColor = win ? 'rgba(63,205,255,.85)' : 'rgba(255,86,170,.8)';
+    ctx.shadowBlur = 26;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(win ? '大 胜' : '败 北', W / 2, H / 2 - 10);
+    ctx.shadowBlur = 0;
+    ctx.font = '16px ' + FONT;
+    ctx.fillStyle = 'rgba(220,238,255,.82)';
+    ctx.fillText(win ? '天下归一' : '再来一局', W / 2, H / 2 + 38);
+    ctx.restore();
+  }
+
+  function reachableFromAny(sources, t) {
+    return sources.some(s => canReach(s, t));
+  }
+
+  // ---------- HUD ----------
+  const youCells = document.getElementById('youCells');
+  const foeCells = document.getElementById('foeCells');
+  const youTroops = document.getElementById('youTroops');
+  const foeTroops = document.getElementById('foeTroops');
+  const timerEl = document.getElementById('timer');
+  const diffBox = document.getElementById('diffs');
+
+  function updateHud() {
+    const p = ownedCells(PLAYER), a = ownedCells(AI);
+    youCells.textContent = p.length;
+    foeCells.textContent = a.length;
+    youTroops.textContent = Math.round(p.reduce((s, c) => s + c.troops, 0)) + ' 兵';
+    foeTroops.textContent = Math.round(a.reduce((s, c) => s + c.troops, 0)) + ' 兵';
+    const m = Math.floor(elapsed / 60), s = Math.floor(elapsed % 60);
+    timerEl.textContent = String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+  }
+
+  // ---------- 难度切换 ----------
+  function setDiff(key) {
+    if (!DIFFICULTY[key] || !state) return;
+    if (state.diff === key) return;
+    state.diff = key;
+    syncDiff();
+    // 立即生效：把待执行的思考间隔压到新难度的上限内
+    aiTimer = Math.min(aiTimer, DIFFICULTY[key].thinkMax);
+    beep(660, 0.03, 0.035);
+  }
+  function syncDiff() {
+    const kids = diffBox.children;
+    for (let i = 0; i < kids.length; i++) {
+      kids[i].classList.toggle('is-on', kids[i].dataset.diff === state.diff);
+    }
+  }
+  diffBox.addEventListener('click', e => {
+    const btn = e.target.closest('[data-diff]');
+    if (btn) setDiff(btn.dataset.diff);
+  });
+
+  // ---------- 交互 ----------
+  function toLocal(e) {
+    const rect = cv.getBoundingClientRect();
+    // rect 是 border-box（含 1px 边框），位图绘制区是内容区：先扣边框偏移、按内容区尺寸归一化。
+    // 宽高各自除以自己的内容区尺寸，等比缩放下等价于 W/rect.width，但不受边框影响（命中更准）
+    const cw = cv.clientWidth || rect.width;
+    const ch = cv.clientHeight || rect.height;
+    const x = (e.clientX - rect.left - (rect.width - cw) / 2) * (W / cw);
+    const y = (e.clientY - rect.top - (rect.height - ch) / 2) * (H / ch);
+    return { x, y };
+  }
+
+  cv.addEventListener('pointerdown', e => {
+    if (over) return;
+    cv.setPointerCapture(e.pointerId);
+    const { x, y } = toLocal(e);
+    const cell = cellAt(x, y);
+    if (!cell || cell.owner !== PLAYER || cell.troops < 2) { drag = { active: false, sources: [], cur: null }; return; }
+    drag = { active: true, sources: [cell], cur: null };
+  });
+
+  cv.addEventListener('pointermove', e => {
+    if (!drag.active) return;
+    const { x, y } = toLocal(e);
+    const cell = cellAt(x, y);
+    if (cell) {
+      drag.cur = cell;
+      if (cell.owner === PLAYER && cell.troops >= 2 && drag.sources.indexOf(cell) < 0) {
+        drag.sources.push(cell); // 扫过的己方星球一起出兵
+      }
+    } else {
+      drag.cur = null;
+    }
+  });
+
+  function endDrag() {
+    if (!drag.active) return;
+    const target = drag.cur;
+    if (target && drag.sources.indexOf(target) < 0) launch(drag.sources, target);
+    drag = { active: false, sources: [], cur: null };
+  }
+
+  cv.addEventListener('pointerup', endDrag);
+  cv.addEventListener('pointercancel', () => { drag = { active: false, sources: [], cur: null }; });
+
+  cv.addEventListener('wheel', e => {
+    e.preventDefault();
+    setPct(state.pct + (e.deltaY > 0 ? -0.05 : 0.05));
+  }, { passive: false });
+
+  // ---------- 比例滑杆 ----------
+  const slider = document.getElementById('pct');
+  const pctLabel = document.getElementById('pctLabel');
+  function setPct(v) {
+    state.pct = Math.min(1, Math.max(0.1, Math.round(v * 20) / 20));
+    syncSlider();
+  }
+  function syncSlider() {
+    const p = Math.round(state.pct * 100);
+    slider.value = p;
+    pctLabel.textContent = p + '%';
+    slider.style.setProperty('--p', p + '%');
+  }
+  slider.addEventListener('input', () => setPct(slider.value / 100));
+
+  const DIFF_KEYS = { '1': 'easy', '2': 'normal', '3': 'hard' };
+  document.addEventListener('keydown', e => {
+    if (e.key === 'r' || e.key === 'R') reset();
+    if (e.key === 'q' || e.key === 'Q') setPct(state.pct - 0.1);
+    if (e.key === 'e' || e.key === 'E') setPct(state.pct + 0.1);
+    if (DIFF_KEYS[e.key]) setDiff(DIFF_KEYS[e.key]);
+  });
+
+  document.getElementById('restart').addEventListener('click', reset);
+
+  // ---------- 音效 ----------
+  let ac = null;
+  function beep(freq, dur, vol) {
+    try {
+      if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
+      const o = ac.createOscillator(), g = ac.createGain();
+      o.type = 'triangle';
+      o.frequency.value = freq;
+      g.gain.value = vol;
+      g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + dur);
+      o.connect(g); g.connect(ac.destination);
+      o.start(); o.stop(ac.currentTime + dur);
+    } catch (_) {}
+  }
+
+  // ---------- 启动 ----------
+  // 窗口尺寸变化：rAF 节流重算缩放；只有 DPR 变化（跨屏拖动）才重建 backing store 与星空缓存
+  let resizeRaf = 0;
+  function onResize() {
+    if (resizeRaf) return;
+    resizeRaf = requestAnimationFrame(() => {
+      resizeRaf = 0;
+      if (Math.min(window.devicePixelRatio || 1, 2) !== DPR) fitCanvas();
+      else applyScale();
+    });
+  }
+  window.addEventListener('resize', onResize);
+  window.addEventListener('orientationchange', onResize);
+  // 字体/布局晚到（系统字体回退、滚动条出现）时补一次量测，避免起始尺寸偏差一直留着
+  window.addEventListener('load', applyScale);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(applyScale).catch(() => {});
+
+  fitCanvas();
+  reset();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+# 依赖与构建产物
+node_modules/
+dist/
+*.asar
+
+# 原始参考素材（视频过大不入库）
+效果.mp4
+
+# 系统与编辑器
+Thumbs.db
+Desktop.ini
+.DS_Store
+.workbuddy/
