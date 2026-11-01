@@ -11,3 +11,7 @@ Thumbs.db
 Desktop.ini
 .DS_Store
 .workbuddy/
+
+# Steam 上传产物（体积大，不入库）
+steam/scripts/depot/
+steam/scripts/output/

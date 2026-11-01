@@ -1,0 +1,12 @@
+"appbuild"
+{
+  "appid"   "480"
+  "desc"    "Shachang Showdown v1.0.0"
+  "buildoutput"   "output"
+  "contentroot"   "..\\depot"
+  // 拿到真实 AppID 后：改上面 appid、下面 depot id、文件名三处数字即可
+  "depots"
+  {
+    "481"   "depot_build_481.vdf"
+  }
+}

@@ -103,6 +103,7 @@ function decide(ctx) {
 ├── algo-lab/             # 算法实验场：编辑、预览、批量跑测、战报导出
 ├── algo/                 # 推荐算法 + 调参脚本（tune.js / eval.js）
 ├── desktop/              # Electron 桌面版打包工程（见 desktop/BUILD.md）
+├── steam/                # Steam 上架物料：商店图、截图、steamcmd 脚本（见 steam/STEAM_RELEASE.md）
 ├── docs/images/          # README 截图
 └── dist/                 # 构建产物（不入库）
 ```
@@ -136,6 +137,11 @@ node algo/tune.js     # 坐标下降自动调参
 ## 打包桌面版
 
 详见 [desktop/BUILD.md](desktop/BUILD.md)（Electron + electron-builder → NSIS 安装程序，含踩坑记录）。
+
+## 上架 Steam
+
+商店图、实机截图、steamcmd 上传脚本与成就骨架已全部备好于 `steam/`，
+完整执行步骤见 [steam/STEAM_RELEASE.md](steam/STEAM_RELEASE.md)。
 
 ## License
 

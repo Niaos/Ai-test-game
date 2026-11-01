@@ -1,0 +1,18 @@
+"DepotBuild"
+{
+  "DepotID"   "481"
+
+  // 整个 depot 目录递归上传
+  "FileMapping"
+  {
+    "LocalPath"   "*"
+    "DepotPath"   "*"
+    "recursive"   "1"
+  }
+
+  // 排除开发期辅助文件（不影响游戏运行）
+  "FileExclusion"   "steam_appid.txt"
+  "FileExclusion"   "*.log"
+  "FileExclusion"   "*.pdb"
+  "FileExclusion"   "output\\*"
+}
