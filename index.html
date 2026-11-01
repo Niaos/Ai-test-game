@@ -188,8 +188,9 @@
   }
   .icon-btn:hover { color: var(--cyan); border-color: var(--cyan); box-shadow: 0 0 12px -4px var(--cyan); }
 
-  .stage { flex: 1; min-height: 0; position: relative; display: flex; align-items: center; justify-content: center; padding: 8px; }
-  canvas { max-width: 100%; max-height: 100%; display: block; border-radius: 0; touch-action: none;
+  .stage { flex: 1; min-height: 0; position: relative; display: flex; align-items: center; justify-content: center; padding: 8px; overflow: hidden; }
+  .stage.with-rail { padding-right: 62px; }
+  canvas { display: block; border-radius: 0; touch-action: none; will-change: transform;
     border: 1px solid var(--line2); box-shadow: 0 0 40px -20px rgba(94, 230, 255, .4); }
 
   .controls { padding: 10px 14px 13px; background: #051420; border-top: 1px solid var(--line2); }
@@ -207,6 +208,56 @@
   #pctLabel { width: 44px; text-align: right; font-variant-numeric: tabular-nums; color: var(--cyan-hi); }
   .hint { font-size: 10px; color: var(--dim); margin-top: 6px; line-height: 1.5; letter-spacing: .5px; }
   .hint::before { content: '// '; color: var(--cyan-dim); }
+
+  /* 兵力步进按钮（桌面） */
+  .step-btn {
+    width: 26px; height: 22px; flex: none; display: flex; align-items: center; justify-content: center;
+    font-size: 15px; line-height: 1; padding: 0; color: var(--cyan);
+    background: rgba(10, 35, 52, .8); border: 1px solid var(--line2);
+    font-variant-numeric: tabular-nums; touch-action: manipulation;
+  }
+  .step-btn:hover { background: var(--cyan); color: #032027; }
+  .step-btn:active { background: var(--cyan-hi); color: #032027; }
+
+  /* 缩放读数（点击复位） */
+  .zoomtag {
+    position: absolute; left: 10px; bottom: 10px; z-index: 4; display: flex; align-items: center; gap: 6px;
+    padding: 4px 8px; font-size: 10px; letter-spacing: 1px; color: var(--cyan-dim);
+    background: rgba(4, 18, 28, .82); border: 1px solid var(--line2); cursor: pointer;
+  }
+  .zoomtag::before { content: '◱'; color: var(--cyan-dim); }
+  .zoomtag b { color: var(--cyan-hi); font-variant-numeric: tabular-nums; font-weight: 500; }
+  .zoomtag:hover { color: var(--cyan); border-color: var(--cyan); }
+  .zoomtag.off { opacity: .45; }
+
+  /* 兵力滑条（移动端右侧固定竖排） */
+  .pow-rail {
+    position: absolute; right: 8px; top: 50%; transform: translateY(-50%); z-index: 5;
+    display: none; flex-direction: column; align-items: center; gap: 7px;
+    width: 54px; height: 320px; max-height: calc(100% - 16px); padding: 8px 0 7px;
+    background: rgba(4, 18, 28, .84); border: 1px solid var(--line2);
+    box-shadow: 0 0 26px -14px var(--cyan);
+  }
+  .pow-rail.show { display: flex; }
+  .pow-rail .cap { font-size: 9px; letter-spacing: 1px; color: var(--cyan-dim); }
+  .pow-btn {
+    width: 36px; height: 30px; flex: none; display: flex; align-items: center; justify-content: center;
+    font-size: 17px; line-height: 1; padding: 0; color: var(--cyan);
+    background: rgba(10, 35, 52, .8); border: 1px solid var(--line2); touch-action: manipulation;
+  }
+  .pow-btn:active, .pow-btn.on { background: var(--cyan); color: #032027; }
+  .pow-track {
+    position: relative; width: 12px; flex: 1 1 auto; min-height: 70px;
+    background: #08202d; border: 1px solid var(--line); cursor: ns-resize; touch-action: none;
+  }
+  .pow-fill { position: absolute; left: 0; right: 0; bottom: 0; height: 44%;
+    background: linear-gradient(0deg, rgba(94, 230, 255, .22), var(--cyan)); pointer-events: none; }
+  .pow-handle {
+    position: absolute; left: 50%; bottom: 44%; width: 30px; height: 11px;
+    transform: translate(-50%, 50%); background: var(--cyan-hi);
+    border: 1px solid var(--bg0); box-shadow: 0 0 10px var(--cyan); pointer-events: none;
+  }
+  .pow-val { font-size: 12px; color: var(--cyan-hi); font-variant-numeric: tabular-nums; letter-spacing: .5px; }
 
   /* 代码模式面板 */
   .codePanel { display: none; flex-direction: column; gap: 6px; padding: 8px 10px 10px;
@@ -396,6 +447,10 @@
     .side b { font-size: 15px; }
     .codePanel { height: 46vh; }
     .sys-top span:nth-child(3), .sys-bot span:nth-child(2) { display: none; }
+    .pow-rail { width: 46px; height: 268px; right: 6px; }
+    .pow-btn { width: 32px; height: 28px; font-size: 16px; }
+    .pow-rail .cap { display: none; }
+    .zoomtag { left: 8px; bottom: 8px; font-size: 9px; }
   }
  </style>
 </head>
@@ -470,13 +525,26 @@
 
     <div class="stage" id="stage">
       <canvas id="cv"></canvas>
+      <div class="zoomtag" id="zoomTag" title="点击复位缩放">ZOOM <b id="zoomVal">1.0×</b></div>
+      <div class="pow-rail" id="powRail">
+        <div class="cap">兵力</div>
+        <button class="pow-btn" id="powPlus" aria-label="增加出兵比例">+</button>
+        <div class="pow-track" id="powTrack">
+          <div class="pow-fill" id="powFill"></div>
+          <div class="pow-handle" id="powHandle"></div>
+        </div>
+        <button class="pow-btn" id="powMinus" aria-label="减少出兵比例">−</button>
+        <div class="pow-val" id="powVal">50%</div>
+      </div>
       <div class="veil hidden" id="pauseVeil"><strong>作业暂停</strong><span>SYSTEM.HOLD // 点右上角 ≡ 继续作业</span></div>
     </div>
 
     <div class="controls" id="dragControls">
       <div class="pctrow">
         <span>出兵比例</span>
+        <button class="step-btn" id="pctMinus" title="减少 5%（键盘 -）">−</button>
         <input type="range" id="pct" min="10" max="100" step="5" value="50">
+        <button class="step-btn" id="pctPlus" title="增加 5%（键盘 +）">+</button>
         <span id="pctLabel">50%</span>
       </div>
       <div class="hint" id="modeHint">从己方星球拖到目标星球松手出兵；拖动途中扫过其他己方星球可多路齐发</div>
@@ -827,7 +895,9 @@ function decide(ctx) {
     pending: false,
     drag: null,
     algoErr: 0, algoErrMsg: '', codeHintEl: null, codeHintTxt: '',
-    CELL: 70, offX: 0, offY: 0
+    CELL: 70, offX: 0, offY: 0,
+    view: { zoom: 1, panX: 0, panY: 0, baseW: 0, baseH: 0 },
+    ptrs: {}, gesture: null
   };
 
   // ---------- 存档 ----------
@@ -930,18 +1000,86 @@ function decide(ctx) {
 
   // ---------- 画布 ----------
   var cv, ctx;
+  var ZOOM_MIN = 1, ZOOM_MAX = 3.5;
+
+  // stage 内容区（扣除 padding）在屏幕上的中心
+  function contentOrigin() {
+    var stage = $('stage'), b = stage.getBoundingClientRect();
+    var cs = window.getComputedStyle(stage);
+    var cw = stage.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    var ch = stage.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+    return {
+      x: b.left + parseFloat(cs.paddingLeft) + cw / 2,
+      y: b.top + parseFloat(cs.paddingTop) + ch / 2,
+      w: cw, h: ch
+    };
+  }
+  // 屏幕坐标 → 相对 stage 内容中心的偏移（缩放锚点用）
+  function stageRel(clientX, clientY) {
+    var o = contentOrigin();
+    return { x: clientX - o.x, y: clientY - o.y };
+  }
+
+  function clampPan() {
+    var v = app.view, o = contentOrigin();
+    var mx = Math.max(0, v.baseW * v.zoom / 2 - o.w / 2);
+    var my = Math.max(0, v.baseH * v.zoom / 2 - o.h / 2);
+    v.panX = Math.max(-mx, Math.min(mx, v.panX));
+    v.panY = Math.max(-my, Math.min(my, v.panY));
+  }
+
+  // 把视图状态（缩放 + 平移）写到 canvas 上：CSS 尺寸负责缩放，transform 负责平移
+  function applyView() {
+    if (!cv) return;
+    var v = app.view;
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var cssW = Math.max(1, v.baseW * v.zoom);
+    var cssH = Math.max(1, v.baseH * v.zoom);
+    // 位图分辨率随缩放提升，上限 2.6 世界像素/倍（兼顾清晰度与显存）
+    var s = Math.min(Math.max(cssW * dpr / W, dpr), 2.6);
+    var bw = Math.round(W * s), bh = Math.round(H * s);
+    if (cv.width !== bw || cv.height !== bh) { cv.width = bw; cv.height = bh; }
+    ctx.setTransform(s, 0, 0, s, 0, 0);
+    cv.style.width = cssW + 'px';
+    cv.style.height = cssH + 'px';
+    cv.style.transform = 'translate(' + v.panX.toFixed(1) + 'px,' + v.panY.toFixed(1) + 'px)';
+    var zv = $('zoomVal');
+    if (zv) zv.textContent = v.zoom.toFixed(1) + '×';
+    var tag = $('zoomTag');
+    if (tag) tag.classList.toggle('off', v.zoom <= ZOOM_MIN + 0.001);
+  }
+
+  function resetView() {
+    app.view.zoom = 1; app.view.panX = 0; app.view.panY = 0;
+    clampPan(); applyView(); drawScene();
+  }
+
+  // 以屏幕锚点为中心缩放到 z1（ax/ay 为相对 stage 中心的像素偏移）
+  function zoomTo(z1, ax, ay) {
+    var v = app.view;
+    z1 = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z1));
+    if (Math.abs(z1 - v.zoom) < 1e-4) { clampPan(); applyView(); return; }
+    var k = z1 / v.zoom;
+    v.panX = ax - (ax - v.panX) * k;
+    v.panY = ay - (ay - v.panY) * k;
+    v.zoom = z1;
+    clampPan(); applyView(); drawScene();
+  }
+
   function fitCanvas() {
     if (!cv) return;
-    var dpr = Math.min(window.devicePixelRatio || 1, 2);
-    cv.width = Math.round(W * dpr);
-    cv.height = Math.round(H * dpr);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    var box = $('stage').getBoundingClientRect();
-    var availH = box.height - 12, availW = box.width - 12;
+    var stage = $('stage');
+    var box = stage.getBoundingClientRect();
+    var cs = window.getComputedStyle(stage);
+    var availW = stage.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - 8;
+    var availH = stage.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - 8;
+    availW = Math.max(40, availW); availH = Math.max(40, availH);
     var scale = Math.min(availW / W, availH / H, 1);
     if (!isFinite(scale) || scale <= 0) return;
-    cv.style.width = (W * scale) + 'px';
-    cv.style.height = (H * scale) + 'px';
+    app.view.baseW = W * scale;
+    app.view.baseH = H * scale;
+    clampPan();
+    applyView();
   }
 
   function layoutBoard() {
@@ -1148,8 +1286,11 @@ function decide(ctx) {
     $('hudLevel').textContent = Bots.PRESETS[app.settings.level].name;
     $('hudMode').textContent = { mouse: '鼠标', touch: '触屏', code: '代码' }[app.settings.mode];
     $('modeHint').textContent = app.settings.mode === 'touch'
-      ? '手指按住己方星球拖到目标星球松手出兵；拖动途中扫过其他星球可多路齐发'
-      : '点选己方星球（可多选）再点目标星球出兵，也可以直接拖拽';
+      ? '按住己方星球拖到目标松手出兵；扫过其他星球可多路齐发。双指捏合缩放，空白处拖动平移'
+      : '拖拽或点选出兵；滚轮缩放，空白处拖动平移，点左下 ZOOM 复位';
+    app.view.zoom = 1; app.view.panX = 0; app.view.panY = 0;
+    app.ptrs = {}; app.gesture = null;
+    syncPowRail();
 
     show('game');
     fitCanvas();
@@ -1333,6 +1474,68 @@ function decide(ctx) {
     return bestD <= app.CELL * 0.6 ? best : null;
   }
 
+  // ---------- 出兵比例（滑杆 / ± 按钮 / 右侧竖条） ----------
+  function setPct(v) {
+    var el = $('pct');
+    v = Math.round(v / 5) * 5;
+    v = Math.max(10, Math.min(100, v));
+    el.value = v;
+    el.style.setProperty('--p', v + '%');
+    $('pctLabel').textContent = v + '%';
+    var pv = $('powVal'), fill = $('powFill'), hd = $('powHandle');
+    var p = (v - 10) / 90 * 100;
+    if (pv) pv.textContent = v + '%';
+    if (fill) fill.style.height = p + '%';
+    if (hd) hd.style.bottom = p + '%';
+    return v;
+  }
+  function stepPct(d) { return setPct(Number($('pct').value) + d); }
+
+  function bindHold(el, fn) {
+    var t = 0, iv = 0;
+    function stop() { clearTimeout(t); clearInterval(iv); t = iv = 0; }
+    el.addEventListener('pointerdown', function (e) {
+      e.preventDefault();
+      fn();
+      stop();
+      t = setTimeout(function () { iv = setInterval(fn, 90); }, 400);
+    });
+    ['pointerup', 'pointerleave', 'pointercancel', 'blur'].forEach(function (k) {
+      el.addEventListener(k, stop);
+    });
+  }
+
+  function bindPowRail() {
+    var track = $('powTrack');
+    var dragging = false;
+    function y2v(clientY) {
+      var b = track.getBoundingClientRect();
+      var t = 1 - (clientY - b.top) / Math.max(1, b.height);
+      return 10 + Math.max(0, Math.min(1, t)) * 90;
+    }
+    track.addEventListener('pointerdown', function (e) {
+      dragging = true;
+      try { track.setPointerCapture(e.pointerId); } catch (err) { }
+      setPct(y2v(e.clientY));
+      e.preventDefault();
+    });
+    track.addEventListener('pointermove', function (e) {
+      if (dragging) setPct(y2v(e.clientY));
+    });
+    ['pointerup', 'pointercancel'].forEach(function (k) {
+      track.addEventListener(k, function () { dragging = false; });
+    });
+  }
+
+  function syncPowRail() {
+    var rail = $('powRail');
+    if (!rail) return;
+    var coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+    var show = app.settings.mode !== 'code' && (app.settings.mode === 'touch' || coarse);
+    rail.classList.toggle('show', show);
+    $('stage').classList.toggle('with-rail', show);
+  }
+
   function sendOrders(sources, target) {
     if (!target || !app.game || app.over || app.paused) return;
     var pct = Number($('pct').value) / 100;
@@ -1344,34 +1547,96 @@ function decide(ctx) {
     if (sent) beep(600, 0.035, 0.04);
   }
 
+  function ptrCount() { return Object.keys(app.ptrs).length; }
+
+  function beginPan(e) {
+    app.gesture = {
+      mode: 'pan', id: e.pointerId,
+      sx: e.clientX, sy: e.clientY,
+      panX: app.view.panX, panY: app.view.panY, moved: false
+    };
+  }
+
+  // 两指：计算初始距离与中点
+  function beginPinch() {
+    var ids = Object.keys(app.ptrs);
+    var a = app.ptrs[ids[0]], b = app.ptrs[ids[1]];
+    app.gesture = {
+      mode: 'pinch',
+      d0: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)),
+      cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2,
+      zoom0: app.view.zoom, panX0: app.view.panX, panY0: app.view.panY
+    };
+    app.drag = null; app.selection = []; app.pending = false;
+    drawScene();
+  }
+
+  function movePinch() {
+    var g = app.gesture, ids = Object.keys(app.ptrs);
+    if (!g || ids.length < 2) return;
+    var a = app.ptrs[ids[0]], b = app.ptrs[ids[1]];
+    var d = Math.max(1, Math.hypot(a.x - b.x, a.y - b.y));
+    var cxNow = (a.x + b.x) / 2, cyNow = (a.y + b.y) / 2;
+    var z1 = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, g.zoom0 * d / g.d0));
+    var v = app.view;
+    var r0 = stageRel(g.cx, g.cy), r1 = stageRel(cxNow, cyNow);
+    var k = z1 / g.zoom0;
+    // 先以初始双指中点为锚缩放，再叠加中点位移（双指拖动 = 平移）
+    v.panX = (r0.x - (r0.x - g.panX0) * k) + (r1.x - r0.x);
+    v.panY = (r0.y - (r0.y - g.panY0) * k) + (r1.y - r0.y);
+    v.zoom = z1;
+    clampPan(); applyView(); drawScene();
+  }
+
   function onDown(e) {
-    if (!app.game || app.over || app.paused) return;
+    if (!app.game || app.over) return;
     ensureAudio();
-    if (app.settings.mode === 'code') return; // 代码模式只看不打
+    app.ptrs[e.pointerId] = { x: e.clientX, y: e.clientY };
+    try { cv.setPointerCapture(e.pointerId); } catch (err) { }
+
+    // 第二根手指落下 → 进入缩放/双指平移
+    if (ptrCount() >= 2) { beginPinch(); return; }
+    if (app.paused) return;
+
+    if (app.settings.mode === 'code') { beginPan(e); return; } // 代码模式只看不打，可缩放平移
+
     var p = toLocal(e);
     var cell = hitCell(p, app.settings.mode === 'touch');
 
     // 已有多选（鼠标点选流程）→ 这一下作为目标
     if (app.pending && app.selection.length) {
       if (cell && app.selection.indexOf(cell) < 0) {
-        sendOrders(app.selection, cell);
+        sendOrders(app.selection.map(function (id) { return app.game.cells[id]; }).filter(Boolean), cell);
         app.selection = [];
         app.pending = false;
         drawScene();
         return;
       }
-      if (!cell) { app.selection = []; app.pending = false; drawScene(); return; }
+      if (!cell) { beginPan(e); return; }
     }
 
-    if (!cell || cell.owner !== 0 || cell.troops < 2) return;
+    // 没按在能出兵的己方星球上 → 空白处拖动即平移画面
+    if (!cell || cell.owner !== 0 || cell.troops < 2) { beginPan(e); return; }
     app.selection = [cell.id];
     app.pending = false;
     app.drag = { startX: cell.id, target: null, moved: false };
-    e.target.setPointerCapture && e.target.setPointerCapture(e.pointerId);
     drawScene();
   }
 
   function onMove(e) {
+    if (app.ptrs[e.pointerId]) { app.ptrs[e.pointerId].x = e.clientX; app.ptrs[e.pointerId].y = e.clientY; }
+    var g = app.gesture;
+    if (g && g.mode === 'pinch') { movePinch(); return; }
+    if (g && g.mode === 'pan') {
+      var dx = e.clientX - g.sx, dy = e.clientY - g.sy;
+      if (!g.moved && Math.abs(dx) + Math.abs(dy) > 4) g.moved = true;
+      if (g.moved) {
+        app.view.panX = g.panX + dx;
+        app.view.panY = g.panY + dy;
+        clampPan(); applyView();
+      }
+      return;
+    }
     if (!app.drag || !app.game) return;
     var p = toLocal(e);
     var cell = cellAt(p.x, p.y);
@@ -1384,6 +1649,31 @@ function decide(ctx) {
   }
 
   function onUp(e) {
+    delete app.ptrs[e.pointerId];
+    var g = app.gesture;
+
+    if (g && g.mode === 'pinch') {
+      if (ptrCount() >= 2) return;
+      app.gesture = null;
+      var ids = Object.keys(app.ptrs);
+      if (ids.length === 1) {
+        // 还剩一根手指：无缝接成平移
+        var p0 = app.ptrs[ids[0]];
+        app.gesture = {
+          mode: 'pan', id: ids[0], sx: p0.x, sy: p0.y,
+          panX: app.view.panX, panY: app.view.panY, moved: true
+        };
+      }
+      return;
+    }
+
+    if (g && g.mode === 'pan') {
+      app.gesture = null;
+      // 没拖动的空白点击 = 取消选择
+      if (!g.moved) { app.selection = []; app.pending = false; drawScene(); }
+      return;
+    }
+
     if (!app.drag || !app.game) return;
     var target = app.drag.target;
     var moved = app.drag.moved;
@@ -1696,10 +1986,13 @@ function decide(ctx) {
       saveStore(); syncSpeed();
     };
 
-    $('pct').oninput = function () {
-      $('pctLabel').textContent = this.value + '%';
-      this.style.setProperty('--p', this.value + '%');
-    };
+    $('pct').oninput = function () { setPct(Number(this.value)); };
+    bindHold($('pctMinus'), function () { stepPct(-5); });
+    bindHold($('pctPlus'), function () { stepPct(5); });
+    bindHold($('powMinus'), function () { stepPct(-5); });
+    bindHold($('powPlus'), function () { stepPct(5); });
+    bindPowRail();
+    $('zoomTag').onclick = resetView;
 
     $('btnRetry').onclick = function () { startGame(); };
     $('btnHome').onclick = function () {
@@ -1744,19 +2037,35 @@ function decide(ctx) {
     cv.addEventListener('pointerdown', onDown);
     cv.addEventListener('pointermove', onMove);
     cv.addEventListener('pointerup', onUp);
-    cv.addEventListener('pointercancel', function () {
-      app.drag = null; app.selection = []; app.pending = false; drawScene();
+    cv.addEventListener('pointercancel', function (e) {
+      delete app.ptrs[e.pointerId];
+      app.drag = null; app.gesture = null; app.selection = []; app.pending = false; drawScene();
     });
     cv.addEventListener('wheel', function (e) {
-      if (app.settings.mode === 'code') return;
+      if (!app.game || app.over) return;
       e.preventDefault();
-      var el = $('pct');
-      var v = Number(el.value) + (e.deltaY > 0 ? -5 : 5);
-      v = Math.max(10, Math.min(100, v));
-      el.value = v;
-      $('pctLabel').textContent = v + '%';
-      el.style.setProperty('--p', v + '%');
+      var r = stageRel(e.clientX, e.clientY);
+      var f = e.deltaY > 0 ? 0.88 : 1.14;
+      zoomTo(app.view.zoom * f, r.x, r.y);
     }, { passive: false });
+
+    // 触控板/触屏双指（Safari 手势事件兜底）
+    cv.addEventListener('gesturestart', function (e) {
+      e.preventDefault();
+      var r = stageRel(e.clientX || window.innerWidth / 2, e.clientY || window.innerHeight / 2);
+      app.gesture = { mode: 'safari', ax: r.x, ay: r.y, zoom0: app.view.zoom, panX0: app.view.panX, panY0: app.view.panY };
+    });
+    cv.addEventListener('gesturechange', function (e) {
+      var g = app.gesture;
+      if (!g || g.mode !== 'safari') return;
+      e.preventDefault();
+      var z1 = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, g.zoom0 * (e.scale || 1)));
+      var k = z1 / g.zoom0, v = app.view;
+      v.panX = g.ax - (g.ax - g.panX0) * k;
+      v.panY = g.ay - (g.ay - g.panY0) * k;
+      v.zoom = z1;
+      clampPan(); applyView(); drawScene();
+    });
 
     window.addEventListener('resize', fitCanvas);
     window.addEventListener('orientationchange', function () { setTimeout(fitCanvas, 120); });
@@ -1765,9 +2074,17 @@ function decide(ctx) {
         if ($('settingsOverlay').classList.contains('hidden')) openSettings();
         else closeSettings();
       }
+      var inField = e.target && (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT');
+      if (inField) return;
       if (e.key === ' ' && app.screen === 'game' && !app.over) {
         e.preventDefault();
         setPaused(!app.paused);
+      }
+      // 兵力 ±：键盘 + / -
+      if (app.screen === 'game' && !app.over) {
+        if (e.key === '+' || e.key === '=') { e.preventDefault(); stepPct(5); }
+        if (e.key === '-' || e.key === '_') { e.preventDefault(); stepPct(-5); }
+        if (e.key === '0') { e.preventDefault(); resetView(); }
       }
     });
   }
@@ -1787,6 +2104,8 @@ function decide(ctx) {
   syncMenu();
   syncSpeed();
   setVolume(app.settings.volume);
+  setPct(50);
+  syncPowRail();
   setPaused(false);
   layoutBoard();
   fitCanvas();
@@ -1807,7 +2126,13 @@ function decide(ctx) {
     openDocs: openDocs,
     insertSnippet: insertSnippet,
     drawScene: drawScene,
-    updateHud: updateHud
+    updateHud: updateHud,
+    fitCanvas: fitCanvas,
+    applyView: applyView,
+    resetView: resetView,
+    zoomTo: function (z, ax, ay) { zoomTo(z, ax || 0, ay || 0); },
+    setPct: setPct,
+    syncPowRail: syncPowRail
   };
 })();
 </script>
