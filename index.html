@@ -118,33 +118,36 @@
   .setting-row > label { font-size: 10.5px; color: var(--dim); letter-spacing: 2px; }
   .setting-row > label::before { content: '▸ '; color: var(--cyan-dim); }
   .setting-row > label b { color: var(--cyan-dim); font-weight: 400; margin-right: 6px; }
-  .seg { display: flex; gap: 6px; flex-wrap: wrap; }
-  .seg button {
-    flex: 1; min-width: 84px; padding: 10px 8px; font-size: 12px; letter-spacing: 1px;
+  .cycle { display: flex; align-items: stretch; gap: 0; border: 1px solid var(--line); background: rgba(10, 35, 52, .7); }
+  .cyc-btn {
+    flex: 0 0 52px; font-size: 14px; color: var(--cyan-dim); background: transparent;
+    border: none; cursor: pointer; transition: .12s; user-select: none;
+  }
+  .cyc-btn:hover { background: rgba(94, 230, 255, .1); color: var(--cyan-hi); }
+  .cyc-btn:active { background: rgba(94, 230, 255, .2); }
+  .cyc-val {
+    flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center;
+    padding: 10px 12px; font-size: 13px; letter-spacing: 2px; color: var(--cyan-hi);
+    background: rgba(94, 230, 255, .08); border-left: 1px solid var(--line); border-right: 1px solid var(--line);
+    text-align: center; white-space: nowrap; overflow: hidden;
+  }
+  .cyc-val.mode { flex-direction: column; gap: 4px; letter-spacing: 1px; }
+  .cyc-val.mode b { font-size: 13px; color: var(--cyan-hi); display: flex; align-items: center; gap: 6px; }
+  .cyc-val.mode b::before { content: '◢'; color: var(--cyan-dim); font-size: 10px; }
+  .cyc-val.mode span { font-size: 10px; color: #86b2c6; letter-spacing: .5px; line-height: 1.5; white-space: normal; }
+  .cyc-val.flip { animation: cycflip .18s steps(2); }
+  @keyframes cycflip { 0% { opacity: .25; } 100% { opacity: 1; } }
+
+  .seg.small { display: flex; gap: 6px; }
+  .seg.small button {
+    flex: 1; padding: 8px 6px; font-size: 11px; letter-spacing: 1px;
     background: rgba(10, 35, 52, .7); border: 1px solid var(--line); color: var(--dim); transition: .12s;
   }
-  .seg button:hover { background: rgba(14, 45, 64, .8); border-color: var(--line2); color: var(--txt); }
-  .seg button.on {
+  .seg.small button:hover { background: rgba(14, 45, 64, .8); border-color: var(--line2); color: var(--txt); }
+  .seg.small button.on {
     background: rgba(94, 230, 255, .13); border-color: var(--cyan); color: var(--cyan-hi);
-    box-shadow: inset 0 0 0 1px rgba(94, 230, 255, .3), 0 0 16px -6px var(--cyan);
+    box-shadow: inset 0 0 0 1px rgba(94, 230, 255, .3);
   }
-  .seg.small button { padding: 8px 6px; font-size: 11px; }
-
-  .modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
-  .mode-card {
-    text-align: left; padding: 12px 11px; background: rgba(10, 35, 52, .7);
-    border: 1px solid var(--line); color: var(--dim); transition: .12s;
-    display: flex; flex-direction: column; gap: 6px;
-  }
-  .mode-card:hover { background: rgba(14, 45, 64, .8); border-color: var(--line2); }
-  .mode-card.on {
-    background: rgba(94, 230, 255, .12); border-color: var(--cyan); color: var(--txt);
-    box-shadow: inset 0 0 0 1px rgba(94, 230, 255, .25), 0 0 18px -8px var(--cyan);
-  }
-  .mode-card b { font-size: 12px; display: flex; align-items: center; gap: 6px; color: var(--txt); letter-spacing: 1px; }
-  .mode-card b::before { content: '◢'; color: var(--cyan-dim); font-size: 10px; }
-  .mode-card.on b { color: var(--cyan-hi); }
-  .mode-card span { font-size: 10px; line-height: 1.55; color: #86b2c6; }
 
   .opp-note {
     font-size: 11px; color: var(--dim); letter-spacing: 1px;
@@ -440,9 +443,9 @@
   @media (max-width: 480px) {
     .radar { display: none; }
     .title-wrap h1 { font-size: 26px; letter-spacing: 8px; text-indent: 8px; }
-    .modes { grid-template-columns: 1fr; }
-    .mode-card { flex-direction: row; align-items: center; gap: 10px; }
-    .mode-card span { display: none; }
+    .cyc-btn { flex-basis: 42px; }
+    .cyc-val { padding: 9px 8px; font-size: 12px; letter-spacing: 1px; }
+    .cyc-val.mode span { display: none; }
     .hud { padding: 8px 10px; gap: 8px; }
     .side b { font-size: 15px; }
     .codePanel { height: 46vh; }
@@ -470,40 +473,34 @@
 
       <div class="setting-row">
         <label><b>01</b>棋盘网格 · GRID</label>
-        <div class="seg" id="segSize">
-          <button data-size="small">小 · 6×9</button>
-          <button data-size="normal" class="on">标准 · 8×12</button>
-          <button data-size="large">大 · 10×15</button>
+        <div class="cycle" id="cycSize">
+          <button class="cyc-btn" data-dir="-1" aria-label="上一个">◀</button>
+          <div class="cyc-val" id="cycSizeVal">标准 · 8×12</div>
+          <button class="cyc-btn" data-dir="1" aria-label="下一个">▶</button>
         </div>
       </div>
 
       <div class="setting-row">
         <label><b>02</b>威胁等级 · THREAT</label>
-        <div class="seg" id="segLevel">
-          <button data-level="easy">简单</button>
-          <button data-level="normal" class="on">普通</button>
-          <button data-level="hard">困难</button>
+        <div class="cycle" id="cycLevel">
+          <button class="cyc-btn" data-dir="-1" aria-label="上一个">◀</button>
+          <div class="cyc-val" id="cycLevelVal">普通</div>
+          <button class="cyc-btn" data-dir="1" aria-label="下一个">▶</button>
         </div>
       </div>
 
       <div class="setting-row">
         <label><b>03</b>操作模式 · CONTROL</label>
-        <div class="modes" id="segMode">
-          <button class="mode-card" data-mode="mouse">
-            <b>鼠标指挥</b><span>点选己方星球再点目标，或直接拖拽</span>
-          </button>
-          <button class="mode-card" data-mode="touch">
-            <b>触屏指挥</b><span>手指按住拖到目标松手，扫过多块一起出兵</span>
-          </button>
-          <button class="mode-card" data-mode="code">
-            <b>代码指挥</b><span>写 decide(ctx) 算法自动指挥，看它打完全场</span>
-          </button>
+        <div class="cycle" id="cycMode">
+          <button class="cyc-btn" data-dir="-1" aria-label="上一个">◀</button>
+          <div class="cyc-val mode" id="cycModeVal"><b>鼠标指挥</b><span>点选己方星球再点目标，或直接拖拽</span></div>
+          <button class="cyc-btn" data-dir="1" aria-label="下一个">▶</button>
         </div>
       </div>
 
       <div class="opp-note" id="oppNote">敌方 AI：普通难度</div>
 
-      <button class="cta" id="btnStart">开始作业</button>
+      <button class="cta" id="btnStart">开始攻略</button>
 
       <div class="menu-links">
         <a href="algo-lab/index.html">▸ 算法实验场（批量验证算法）</a>
@@ -971,16 +968,43 @@ function decide(ctx) {
   }
 
   // ---------- 菜单渲染 ----------
+  var SIZE_OPTS = [
+    { v: 'small', label: '小 · 6×9' },
+    { v: 'normal', label: '标准 · 8×12' },
+    { v: 'large', label: '大 · 10×15' }
+  ];
+  var LEVEL_OPTS = [
+    { v: 'easy', label: '简单' },
+    { v: 'normal', label: '普通' },
+    { v: 'hard', label: '困难' }
+  ];
+  var MODE_OPTS = [
+    { v: 'mouse', t: '鼠标指挥', d: '点选己方星球再点目标，或直接拖拽' },
+    { v: 'touch', t: '触屏指挥', d: '手指按住拖到目标松手，扫过多块一起出兵' },
+    { v: 'code', t: '代码指挥', d: '写 decide(ctx) 算法自动指挥，看它打完全场' }
+  ];
+  function cycIdx(opts, cur) {
+    for (var i = 0; i < opts.length; i++) if (opts[i].v === cur) return i;
+    return 0;
+  }
+  function cycShift(opts, cur, dir) {
+    var i = cycIdx(opts, cur);
+    return opts[(i + dir + opts.length) % opts.length]; // 循环
+  }
+  function cycFlash(el) {
+    el.classList.remove('flip');
+    void el.offsetWidth;
+    el.classList.add('flip');
+  }
+
   function syncMenu() {
-    document.querySelectorAll('#segSize button').forEach(function (b) {
-      b.classList.toggle('on', b.dataset.size === app.settings.size);
-    });
-    document.querySelectorAll('#segLevel button').forEach(function (b) {
-      b.classList.toggle('on', b.dataset.level === app.settings.level);
-    });
-    document.querySelectorAll('#segMode button').forEach(function (b) {
-      b.classList.toggle('on', b.dataset.mode === app.settings.mode);
-    });
+    var so = SIZE_OPTS[cycIdx(SIZE_OPTS, app.settings.size)];
+    var lo = LEVEL_OPTS[cycIdx(LEVEL_OPTS, app.settings.level)];
+    var mo = MODE_OPTS[cycIdx(MODE_OPTS, app.settings.mode)];
+    $('cycSizeVal').textContent = so.label;
+    $('cycLevelVal').textContent = lo.label;
+    var mv = $('cycModeVal');
+    mv.innerHTML = '<b>' + mo.t + '</b><span>' + mo.d + '</span>';
     var note = $('oppNote');
     if (app.saved && app.saved.code) {
       note.innerHTML = '敌方 AI：<b>你的算法 v' + app.saved.version + '</b>（保存于本机）' +
@@ -989,6 +1013,19 @@ function decide(ctx) {
     } else {
       note.innerHTML = '敌方 AI：<b>' + Bots.PRESETS[app.settings.level].name + '难度 AI</b>（可在结算页把胜利算法存成下局对手）';
     }
+  }
+
+  function bindCycle(wrapId, valId, opts, key) {
+    var wrap = document.querySelector(wrapId);
+    wrap.querySelectorAll('.cyc-btn').forEach(function (b) {
+      b.onclick = function () {
+        var o = cycShift(opts, app.settings[key], Number(b.dataset.dir));
+        app.settings[key] = o.v;
+        saveStore();
+        syncMenu();
+        cycFlash($(valId));
+      };
+    });
   }
 
   function clearAlgo() {
@@ -1949,18 +1986,9 @@ function decide(ctx) {
 
   // ---------- 事件绑定 ----------
   function bind() {
-    $('segSize').onclick = function (e) {
-      var b = e.target.closest('[data-size]'); if (!b) return;
-      app.settings.size = b.dataset.size; saveStore(); syncMenu();
-    };
-    $('segLevel').onclick = function (e) {
-      var b = e.target.closest('[data-level]'); if (!b) return;
-      app.settings.level = b.dataset.level; saveStore(); syncMenu();
-    };
-    $('segMode').onclick = function (e) {
-      var b = e.target.closest('[data-mode]'); if (!b) return;
-      app.settings.mode = b.dataset.mode; saveStore(); syncMenu();
-    };
+    bindCycle('#cycSize', 'cycSizeVal', SIZE_OPTS, 'size');
+    bindCycle('#cycLevel', 'cycLevelVal', LEVEL_OPTS, 'level');
+    bindCycle('#cycMode', 'cycModeVal', MODE_OPTS, 'mode');
     $('btnStart').onclick = function () { startGame(); };
     $('btnClearAlgo').onclick = function (e) { e.preventDefault(); clearAlgo(); };
 
